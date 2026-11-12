@@ -1,66 +1,65 @@
 # Sync AI Desktop
 
-A Windows-first, offline-first desktop companion to the Sync AI Android project.
+A Windows-first, offline-first desktop companion to the Sync AI Android project. The desktop application is maintained in this repository; the Android repository remains separate and is used only as a behavioral and design reference.
 
-This repository is intentionally separate from [Sync-AI](https://github.com/SamYoBoi284/Sync-AI). The Android application remains its own product and its source is treated as a reference for desktop parity, not as a target for desktop changes.
+## Technology
 
-## Project direction
+- **Desktop:** Tauri 2
+- **Frontend:** React + TypeScript + Vite
+- **Native backend:** Rust
+- **Local inference:** pinned `llama_cpp = 0.3.2`, bundled llama.cpp, GGUF models
+- **Persistence:** SQLite with versioned schema migrations
+- **Initial target:** Windows x64
+- **Core operation:** offline-first; no cloud service is required for local chat or local persistence
 
-- **Desktop framework:** Tauri 2
-- **Backend:** Rust
-- **Frontend:** React + TypeScript
-- **Frontend build tool:** Vite
-- **Package manager:** npm
-- **Local inference:** pinned llama_cpp Rust bindings with bundled llama.cpp and GGUF (Stage 2 source added; Windows build pending)
-- **Persistence:** SQLite (chat/history and model registry source implemented; runtime validation pending)
-- **Initial platform:** Windows x64
-- **Operating principle:** offline-first; no cloud service required for core chat or inference
+## Current project status
 
-The frontend recreates and adapts the Android application's visual language and workflows for desktop. It does not attempt to transplant Android Java UI code directly.
+**Phases 0–5 have source implementations committed. Windows build and runtime validation remain outstanding.** “Implemented” means source is in `main`; it does not mean the desktop application has passed a Windows build or runtime test.
 
-## Current development status
+### Completed source scope
 
-**Current milestone: Phase 4 Stage 2 source committed.** The desktop shell, Phase 2.2 sidebar, Phase 3 SQLite chat/history layer and Phase 4 Stage 1 model registry and Stage 2 native runtime source are committed. Startup/tray, database, model import, native dependency and UI changes have not been compiled or runtime-tested on Windows.
+- **Phase 0 · Android audit:** desktop port specification and source map.
+- **Phase 1 · Foundation:** Tauri 2, React/TypeScript, Rust command bridge and restrictive capability baseline.
+- **Phase 2 · Desktop shell:** startup splash, single-instance handling, tray lifecycle, navigation, recent chats and settings foundation.
+- **Phase 3 · Chat data:** SQLite chats/messages/settings, History UI, per-assistant-message diagnostics and versioned desktop backup import/export.
+- **Phase 4 · Local model engine:** exactly three stages:
+  1. GGUF library, SHA-256 registration/deduplication, original-path tracking and non-destructive registry removal.
+  2. CPU llama.cpp runtime in an isolated worker, optional Windows Job Object private-commit ceiling, load/unload lifecycle and runtime telemetry.
+  3. SQLite-backed chat inference, streaming, cancellation, sequential queueing and per-message diagnostics.
+- **Phase 5 · Workspace and productivity:** persistent Workspace artifacts, Tasks & Notes, selected-file File Library, saving assistant replies into Workspace and explicit opt-in context from selected notes/artifacts.
 
-The sidebar now includes searchable recent conversations sourced from SQLite History, workspace/system navigation and a dedicated Settings destination. Settings includes the optional RAM Limiter; appearance and other preference controls remain staged.
+### Phase 5 details
 
-The New chat composer remains intentionally disabled until local inference is connected. Chat storage and History source are implemented in Phase 3; Windows runtime validation remains pending.
+- Workspace artifacts are stored in SQLite and support create, search, edit and delete. Assistant replies can be saved as Workspace documents.
+- Notes can be pinned and individually marked for inclusion in future chat context.
+- Workspace artifacts have their own explicit “Include in chat context” setting.
+- Only opted-in notes and Workspace artifacts are sent as reference material with future local prompts. The current context builder caps the combined material at 48 KiB and 20 entries.
+- Tasks support title, details, status, priority and optional due date.
+- File Library opens a native file picker, records the selected file's canonical path, size and SHA-256, and detects missing paths. It does not move, copy or delete the original file.
+- **File Library contents are not read into chat.** The current feature is a path-and-fingerprint registry, not an AI file reader. Any future AI-initiated file operation must go through Phase 6's explicit one-time approval model.
 
-**Phase 4 Stage 2 details:** The Rust GGUF header reader extracts model architecture, name, quantization and memory dimensions. The pinned llama_cpp 0.3.2 wrapper builds llama.cpp from source; the first runtime is CPU-only, loads only on explicit user action, and creates a bounded 2,048-token context session. Model load/unload status, memory estimates, RAM-budget refusal and currently-available-RAM checks are connected in source. The optional configured budget is an application-level guard, not a hard OS process cap; the available-RAM/safety-reserve check remains active even when the optional budget is off. No native build or Windows runtime validation has been performed.
+Phase 5 uses SQLite schema migration v4. The previous chat backup format remains version 1 and still exports chats/messages/diagnostics only; Workspace, tasks, notes and File Library records are not yet included in chat backup export/import.
 
-**Phase 3 implementation source is committed.** The repository now contains the SQLite storage layer, typed Rust commands, per-message diagnostics data model, desktop backup validation/round-trip tests, and a connected History UI with search, rename, delete, import and export source. These changes have not been built or runtime-tested yet. Android backup compatibility is explicitly out of scope.
+## Roadmap
 
-Not implemented yet:
-- Appearance and broader preference controls (the RAM Limiter is implemented in source; theme/accent/motion controls remain planned)
-- Windows build/runtime validation of the new SQLite and History implementation
-- Chat generation, token streaming, queueing and cancellation (the native model/context lifecycle is Stage 2; chat generation is Stage 3)
-- Workspace storage
-- File Library or Tasks & Notes functionality
-- Voice, camera or recorder features
-- Host-computer tools or approval execution
+- **Phase 6 · Secure tools and Device Assist:** registered operations, exact-scope one-time approval, Rust-side validation and narrow Windows adapters. No unrestricted shell, filesystem or process access.
+- **Phase 7 · Finalization and release:** voice, diagnostics/optimization, packaging, installer, security review and complete testing.
 
-## Next milestone: Phase 4 local model engine
+Appearance theme/accent/motion controls, model-specific GGUF chat templates, voice, multimodal support and startup model auto-load remain deferred. Phase 4 remains exactly three stages.
 
-Phase 4 is deliberately organized into **three stages only**:
+## Windows development setup
 
-1. Model management: GGUF import, hashing, deduplication, metadata, selection/removal, hardware RAM detection and an optional user-enabled managed inference RAM budget. **Stage 1 source is committed; Windows validation pending.**
-2. Native runtime: Windows llama.cpp integration, GGUF metadata parsing, explicit model load/unload, context session creation, memory estimates and pre-load safeguards. **Stage 2 source is committed; native build/runtime validation pending.**
-3. Chat inference: streaming, queueing, cancellation, context handling and diagnostics attached to each assistant message.
+Install and verify:
 
-The optional RAM budget will initially be an application-level inference allocation guard, not a claim of an OS-enforced hard process memory cap. Workspace, File Library, Tasks & Notes and broader resource metrics remain in Phase 5.
-
-## Run locally on Windows
-
-Install the Windows prerequisites first:
 - Rust stable with the MSVC toolchain
 - Microsoft C++ Build Tools with **Desktop development with C++**
-- LLVM/libclang available to the Rust native dependency build
+- LLVM/libclang for the native llama.cpp binding build
 - Microsoft Edge WebView2
 - Node.js compatible with the installed Vite version, plus npm
 
 See the [official Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
 
-Then, from the repository root:
+From the repository root:
 
 ~~~powershell
 npm install
@@ -70,36 +69,24 @@ cargo test --manifest-path src-tauri/Cargo.toml
 npm run tauri dev
 ~~~
 
-Running only **npm run dev** opens the browser preview. The Rust bridge is available only inside the Tauri desktop host.
+Running only `npm run dev` opens a browser preview. Native Rust commands and local inference are available only inside the Tauri desktop host.
 
-## Security principle
+## Security boundary
 
-Sync AI must never have unrestricted access to the host computer. Every AI-invoked tool operation, including reads, requires fresh one-time approval for its exact action and scope. Approval expires after that operation and cannot become a permanent permission. Model output is an untrusted proposal, never execution authority.
+The model is not an authority to operate the host computer. The webview has no shell, filesystem, process or opener plugin. File Library registration and GGUF import use native, user-invoked pickers; these features record metadata and do not grant model access to arbitrary files.
 
-The main-window capability still exposes only the core default capability. No shell, filesystem, process or opener plugin is installed. The tray mark is currently generated in Rust; final application icon assets and installer configuration are still pending, so packaging remains disabled.
+Every future AI-invoked host operation, including reads, must require fresh, explicit, one-time approval for its exact operation and scope. Rust independently validates the request. Model output is an untrusted proposal, never execution authority.
 
 ## Repository map
 
-- [Port specification](docs/ANDROID_TO_DESKTOP_SPEC.md): Android source map, UI behavior, feature mapping and implementation sequence.
-- [Architecture](docs/ARCHITECTURE.md): desktop trust boundaries and target layers.
-- [Context Tracker](CONTEXT_TRACKER.md): authoritative project handoff and development state.
-- [Development Log](docs/DEVELOPMENT_LOG.md): chronological implementation record.
-
-## Source reference
-
-- Android reference repository: https://github.com/SamYoBoi284/Sync-AI
-- Initial desktop audit baseline: feat/resource-manager-task-manager-17-10-2026
-- Official Tauri project creation guide: https://v2.tauri.app/start/create-project/
-- Official Tauri Vite frontend guide: https://v2.tauri.app/start/frontend/
+- [Android-to-desktop port specification](docs/ANDROID_TO_DESKTOP_SPEC.md)
+- [Architecture and trust boundaries](docs/ARCHITECTURE.md)
+- [Phase 3 data contract](docs/PHASE3_DATA_CONTRACT.md)
+- [Phase 4 implementation and validation status](docs/PHASE4_REVISION.md)
+- [Phase 5 Workspace and productivity contract](docs/PHASE5_WORKSPACE.md)
+- [Context tracker](CONTEXT_TRACKER.md)
+- [Development log](docs/DEVELOPMENT_LOG.md)
 
 ## License
 
-License has not yet been selected. Do not assume this project is open-source licensed until a LICENSE file is added.
-
-## Current Phase 4 implementation
-
-The model library registers GGUF files by their original path and removes registry entries without deleting source files. Local inference runs in a dedicated worker, with an optional Windows Job Object private-commit ceiling that leaves the main desktop interface outside the limit. Runtime diagnostics report the worker cap, working set, private commit, PID and last error. See docs/PHASE4_REVISION.md for scope and current validation limitations.
-
-## Phase 4 revised source status
-
-All three stages now have source changes: original-path GGUF library, hard-capped isolated inference worker, and SQLite-backed streaming chat with cancellation, sequential queueing and per-assistant-message diagnostics. See docs/PHASE4_REVISION.md. This revision has not been built or runtime-tested on Windows.
+A project license has not yet been selected. Do not assume the repository is open-source licensed until a LICENSE file is added.
