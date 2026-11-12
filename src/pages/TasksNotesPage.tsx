@@ -13,6 +13,7 @@ export function TasksNotesPage() {
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [notes, setNotes] = useState<NoteSummary[]>([]);
   const [taskDraft, setTaskDraft] = useState<TaskInput>(blankTask());
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState<NoteInput>(blankNote());
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,15 +56,38 @@ export function TasksNotesPage() {
     return () => { active = false; };
   }, []);
 
-  async function addTask() {
+  async function saveTask() {
     setSaving(true); setError(""); setNotice("");
     try {
-      await createTask(taskDraft);
+      if (editingTaskId) {
+        await updateTask(editingTaskId, taskDraft);
+        setNotice("Task updated.");
+      } else {
+        await createTask(taskDraft);
+        setNotice("Task added.");
+      }
       setTaskDraft(blankTask());
+      setEditingTaskId(null);
       await refreshTasks();
-      setNotice("Task added.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
     finally { setSaving(false); }
+  }
+
+  function editTask(task: TaskRecord) {
+    setEditingTaskId(task.id);
+    setTaskDraft({
+      title: task.title, details: task.details, status: task.status,
+      priority: task.priority, dueDate: task.dueDate,
+    });
+    setView("tasks");
+    setNotice("");
+    setError("");
+  }
+
+  function cancelTaskEdit() {
+    setEditingTaskId(null);
+    setTaskDraft(blankTask());
+    setNotice("");
   }
 
   async function changeTask(task: TaskRecord, patch: Partial<TaskInput>) {
@@ -138,15 +162,17 @@ export function TasksNotesPage() {
       {error && <p className="tasks-feedback is-error" role="alert">{error}</p>}
       {loading ? <p className="tasks-empty">Loading local items…</p> : view === "tasks" ? (
         <div className="tasks-workspace">
-          <form className="task-create-panel" onSubmit={event => { event.preventDefault(); void addTask(); }}>
-            <div className="tasks-panel-heading"><span className="tasks-kicker">CAPTURE A TASK</span><strong>New task</strong></div>
+          <form className="task-create-panel" onSubmit={event => { event.preventDefault(); void saveTask(); }}>
+            <div className="tasks-panel-heading"><span className="tasks-kicker">{editingTaskId ? "UPDATE TASK" : "CAPTURE A TASK"}</span><strong>{editingTaskId ? "Edit task" : "New task"}</strong></div>
             <label>Title<input value={taskDraft.title} onChange={event => setTaskDraft(current => ({ ...current, title: event.target.value }))} maxLength={200} placeholder="What needs doing?" required /></label>
             <label>Details<textarea value={taskDraft.details} onChange={event => setTaskDraft(current => ({ ...current, details: event.target.value }))} rows={3} placeholder="Optional details…" /></label>
             <div className="task-create-options">
               <label>Priority<select value={taskDraft.priority} onChange={event => setTaskDraft(current => ({ ...current, priority: event.target.value as TaskInput["priority"] }))}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label>
               <label>Due date<input type="date" value={taskDraft.dueDate ?? ""} onChange={event => setTaskDraft(current => ({ ...current, dueDate: event.target.value || null }))} /></label>
+              <label>Status<select value={taskDraft.status} onChange={event => setTaskDraft(current => ({ ...current, status: event.target.value as TaskInput["status"] }))}><option value="todo">To do</option><option value="in-progress">In progress</option><option value="done">Done</option></select></label>
             </div>
-            <button className="tasks-primary-button" type="submit" disabled={saving || !taskDraft.title.trim()}>{saving ? "Saving…" : "Add task"}</button>
+            <button className="tasks-primary-button" type="submit" disabled={saving || !taskDraft.title.trim()}>{saving ? "Saving…" : editingTaskId ? "Save changes" : "Add task"}</button>
+            {editingTaskId && <button className="task-cancel-edit" type="button" onClick={cancelTaskEdit} disabled={saving}>Cancel editing</button>}
           </form>
           <section className="task-list-panel">
             <div className="tasks-panel-heading"><span className="tasks-kicker">YOUR QUEUE</span><strong>{tasks.length} tasks</strong></div>
@@ -159,6 +185,7 @@ export function TasksNotesPage() {
                     <small>{task.dueDate ? "Due " + task.dueDate : "No due date"} · Updated {new Date(task.updatedAt).toLocaleDateString()}</small>
                   </div>
                   <div className="task-card-controls">
+                    <button type="button" className="task-edit-button" onClick={() => editTask(task)} aria-label={"Edit " + task.title}>Edit</button>
                     <select aria-label={"Status for " + task.title} value={task.status} onChange={event => void changeTask(task, { status: event.target.value as TaskInput["status"] })}>
                       <option value="todo">To do</option><option value="in-progress">In progress</option><option value="done">Done</option>
                     </select>
