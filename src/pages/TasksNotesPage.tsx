@@ -200,7 +200,7 @@ export function TasksNotesPage() {
                     <select aria-label={"Status for " + task.title} value={task.status} onChange={event => void changeTask(task, { status: event.target.value as TaskInput["status"] })}>
                       <option value="todo">To do</option><option value="in-progress">In progress</option><option value="done">Done</option>
                     </select>
-                    <button type="button" onClick={() => void removeTask(task)} aria-label={"Delete " + task.title}>×</button>
+                    <button type="button" className="task-delete-button" onClick={() => void removeTask(task)} aria-label={"Delete " + task.title}>×</button>
                   </div>
                 </article>
               ))}
