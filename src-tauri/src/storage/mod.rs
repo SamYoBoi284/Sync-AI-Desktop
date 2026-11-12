@@ -206,10 +206,16 @@ impl Database {
             .optional().map_err(db_error)?.ok_or_else(|| "Model not found".into())
     }
     pub fn delete_model_record(&self, model_id: &str) -> Result<(), String> {
-        let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
-        let changed = connection.execute("DELETE FROM models WHERE id = ?1", [model_id]).map_err(db_error)?;
-        if changed == 0 { return Err("Model not found".into()); }
-        Ok(())
+        let mut connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
+        let tx = connection.transaction().map_err(db_error)?;
+        let was_default: bool = tx.query_row("SELECT is_default FROM models WHERE id = ?1", [model_id], |r| r.get::<_, i64>(0).map(|v| v != 0))
+            .optional().map_err(db_error)?.ok_or_else(|| "Model not found".to_string())?;
+        tx.execute("DELETE FROM models WHERE id = ?1", [model_id]).map_err(db_error)?;
+        if was_default {
+            tx.execute("UPDATE models SET is_default = 1 WHERE id = (SELECT id FROM models ORDER BY imported_at DESC LIMIT 1)", [])
+                .map_err(db_error)?;
+        }
+        tx.commit().map_err(db_error)
     }
 
     pub fn set_setting(&self, key: String, value_json: String) -> Result<(), String> {
@@ -448,6 +454,26 @@ mod tests {
         assert!(db.import_backup(backup).is_err());
         assert_eq!(db.list_chats(None, None, None).unwrap().len(), 1);
         assert_eq!(chat.title, "New conversation");
+    }
+
+    #[test]
+    fn model_registry_keeps_one_default_and_promotes_a_fallback() {
+        let db = memory_db();
+        let make_model = |id: &str, hash: &str| ModelRecord {
+            id: id.into(), name: id.into(), file_name: format!("{id}.gguf"), size_bytes: 1,
+            sha256: hash.into(), architecture: None, quantization: None,
+            imported_at: now(), is_default: false,
+        };
+        let first = make_model("model-a", "hash-a");
+        let second = make_model("model-b", "hash-b");
+        db.register_model(&first, "model-a.gguf").unwrap();
+        db.register_model(&second, "model-b.gguf").unwrap();
+        assert!(db.list_models().unwrap().iter().find(|m| m.id == "model-a").unwrap().is_default);
+        db.set_default_model("model-b").unwrap();
+        db.delete_model_record("model-b").unwrap();
+        let remaining = db.list_models().unwrap();
+        assert_eq!(remaining.len(), 1);
+        assert!(remaining[0].is_default);
     }
 
 }

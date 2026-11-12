@@ -39,8 +39,8 @@ pub fn import_gguf(app: AppHandle, db: State<'_, Database>) -> Result<Option<Mod
     let id = Uuid::new_v4().to_string();
     let safe_name: String = source_name.chars().map(|c| if c.is_control() || matches!(c, '<' | '>' | '"' | '|' | '?' | '*' | ':' | '/' | '\\') { '_' } else { c }).collect();
     let stored_name = format!("{id}_{safe_name}"); let destination = model_dir.join(&stored_name);
-    fs::copy(&source, &destination).map_err(|e| format!("Cannot copy model into managed storage: {e}"))?;
-    let copied_size = fs::metadata(&destination).map_err(|e| format!("Cannot verify imported model: {e}"))?.len();
+    if let Err(error) = fs::copy(&source, &destination) { let _ = fs::remove_file(&destination); return Err(format!("Cannot copy model into managed storage: {error}")); }
+    let copied_size = match fs::metadata(&destination) { Ok(metadata) => metadata.len(), Err(error) => { let _ = fs::remove_file(&destination); return Err(format!("Cannot verify imported model: {error}")); } };
     let mut copied = File::open(&destination).map_err(|e| format!("Cannot verify imported model hash: {e}"))?;
     let mut verify_hasher = Sha256::new();
     loop { let count = copied.read(&mut buffer).map_err(|e| format!("Cannot verify imported model hash: {e}"))?; if count == 0 { break; } verify_hasher.update(&buffer[..count]); }
