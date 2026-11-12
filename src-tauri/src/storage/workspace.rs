@@ -552,6 +552,34 @@ mod tests {
     }
 
     #[test]
+    fn list_views_return_summaries_and_detail_fetches_full_content() {
+        let db = memory_db();
+        let artifact = db.create_workspace_artifact(NewWorkspaceArtifact {
+            title: "Long report".into(),
+            kind: "report".into(),
+            content: "Full artifact body remains available on demand.".into(),
+            include_in_context: false,
+            source_chat_id: None,
+            source_message_id: None,
+        }).unwrap();
+        let artifacts = db.list_workspace_artifacts(None).unwrap();
+        assert_eq!(artifacts.len(), 1);
+        assert_eq!(artifacts[0].id, artifact.id);
+        assert_eq!(db.get_workspace_artifact(&artifact.id).unwrap().content, "Full artifact body remains available on demand.");
+
+        let note = db.create_note(NoteInput {
+            title: "Private note".into(),
+            content: "Full note body".into(),
+            pinned: false,
+            include_in_context: false,
+        }).unwrap();
+        let notes = db.list_notes(None).unwrap();
+        assert_eq!(notes.len(), 1);
+        assert_eq!(notes[0].id, note.id);
+        assert_eq!(db.get_note(&note.id).unwrap().content, "Full note body");
+    }
+
+    #[test]
     fn task_validation_rejects_unknown_statuses() {
         let db = memory_db();
         let result = db.create_task(TaskInput {
