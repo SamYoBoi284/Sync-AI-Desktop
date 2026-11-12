@@ -28,4 +28,4 @@ Chronological record of meaningful implementation sessions. Keep entries factual
 - Kept navigation placeholders visibly marked planned and did not claim chat, model, storage or tool functionality.
 - Disabled packaging until app icon and installer configuration are ready.
 - Source files were committed and fetched back from GitHub for verification.
-- Not run: npm install, npm build, cargo check, Tauri launch, Windows installer or runtime tests.
+- Validation attempt: Node.js v22.16.0 and npm 10.9.2 are available in the execution container. Rust/Cargo are absent, and network DNS to GitHub/npm is unavailable, so dependencies could not be installed and no build or Tauri launch could be run. Vite 8 requires Node 20.19+ or 22.12+, so the available Node version meets that requirement.

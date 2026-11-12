@@ -27,6 +27,7 @@
 - The main-window capability contains core:default only.
 - No shell, filesystem, process or opener plugin is added.
 - The frontend status page distinguishes the native bridge from browser preview.
+- Key scaffold files and updated branch head were fetched back from GitHub.
 
 ### Not yet implemented or verified
 
@@ -42,6 +43,14 @@
 - Permission/approval UI or enforcement
 - Windows tools/system adapters
 - Automated tests, CI, installer, app icons or packaging
+
+### Validation environment check
+
+- Available in the assistant execution container: Node.js v22.16.0 and npm 10.9.2.
+- Vite 8's current documentation requires Node.js 20.19+ or 22.12+; the available Node 22.16.0 satisfies that requirement.
+- Rust and Cargo are not installed in that container.
+- Outbound DNS/network access to GitHub was unavailable, so project cloning and npm dependency installation could not be completed.
+- Therefore no frontend build, Cargo check, Tauri launch or Windows runtime result is claimed. These checks must be run in the actual Windows development environment after dependency installation.
 
 ## 3. Product requirements
 
@@ -226,8 +235,9 @@ Do not implement computer-control tools before the approval model and its tests 
 - Added a static foundation UI; planned navigation remains nonfunctional and labelled planned.
 - Added a restrictive CSP and a main-window capability with core:default only. No shell/filesystem/process/opener plugin.
 - Disabled packaging until application icon and installer configuration are ready.
-- Source files and GitHub branch state verified. Dependency installation, frontend build, cargo check and Windows Tauri launch were not run in this session.
+- Source files and GitHub branch state verified.
+- Validation attempt: the execution container reports Node v22.16.0/npm 10.9.2; no Rust/Cargo toolchain. DNS/network access to GitHub was unavailable, preventing clone and npm dependency installation. Vite 8's official Node requirement (20.19+ or 22.12+) is satisfied by this Node version, but no frontend build or Windows Tauri launch was run.
 
 ## 13. Exact next step
 
-Install dependencies on the Windows development machine, generate/commit package-lock.json, run npm run build, then run npm run tauri dev and verify the get_app_info handshake. Resolve actual build errors before beginning the interactive chat UI. Do not add filesystem or shell access as a shortcut.
+On the Windows development machine, install/verify Node.js 22.12+ (or 20.19+), Rust stable MSVC, Microsoft C++ Build Tools with Desktop development with C++, and WebView2. Run npm install to generate package-lock.json, npm run build, then npm run tauri dev and verify the get_app_info handshake. Resolve actual build errors before beginning the interactive chat UI. Do not add filesystem or shell access as a shortcut.
