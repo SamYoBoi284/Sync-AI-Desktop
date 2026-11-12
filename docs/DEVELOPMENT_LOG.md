@@ -142,3 +142,15 @@ Chronological record of meaningful implementation sessions. Keep entries factual
 - Activated Workspace, Tasks & Notes and File Library navigation routes. Added responsive styles.
 - Updated the README and Context Tracker, and added Phase 5 data/security documentation.
 - Validation boundary: source consistency was reviewed through the GitHub API. No npm build, TypeScript typecheck, Cargo fmt/check/test, native compilation, Tauri launch or Windows runtime test was run. The Phase 5 source must be validated on the personal Windows development machine.
+
+
+### Phase 5 follow-up — validation and safety refinements
+
+- Added summary-only Workspace and Notes list queries; full content is fetched only when a user opens an artifact or note. Added a native `get_note` command.
+- Added full task editing for title, details, status, priority and due date. Task details are capped at 32 KiB and task list results at 200.
+- Added Rust validation that saved assistant-message provenance uses a source message belonging to the supplied source conversation.
+- File Library hashing now uses one open file handle, verifies size and modification time after hashing, and rejects a file that changes while its fingerprint is being calculated. Non-UTF-8 paths are rejected rather than stored lossily.
+- File Library relinking now requires an exact match with the original SHA-256 fingerprint. A changed file must be registered as a new library entry.
+- Added Rust unit-test source for lightweight summary/detail behavior, mismatched chat/message provenance and mismatched File Library relinking.
+- Re-ran a separate Python SQLite smoke test against the Phase 5 migration shape. It passed checks for tables/indexes, opt-in context query, 48 KiB clipping, summary-only query, FK nulling, task status/priority constraints and unique library path/hash constraints.
+- This SQL smoke test does not compile or test Rust. Frontend build, Cargo fmt/check/test, native picker, Tauri launch, worker and Windows runtime remain unverified.
