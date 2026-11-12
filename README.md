@@ -33,7 +33,7 @@ A Windows-first, offline-first desktop companion to the Sync AI Android project.
 - Workspace artifacts are stored in SQLite and support create, search, edit and delete. Full artifact bodies load on selection rather than for every list row. Assistant replies can be saved as Workspace documents.
 - Notes can be pinned and individually marked for inclusion in future chat context. Full note bodies load only when selected.
 - Workspace artifacts have their own explicit “Include in chat context” setting.
-- Only opted-in notes and Workspace artifacts are sent as reference material with future local prompts. The current context builder caps the combined material at 48 KiB and 20 entries.
+- Only opted-in notes and Workspace artifacts are sent as reference material with future local prompts. The context builder caps the combined material at 48 KiB and 20 entries; the inference worker then applies the model's smaller token budget and may trim older Workspace material to preserve recent conversation turns.
 - Tasks support title, details (up to 32 KiB), status, priority and optional due date.
 - File Library opens a native file picker, records the selected file's canonical path, size and SHA-256, and detects missing paths. It does not move, copy or delete the original file.
 - **File Library contents are not read into chat.** The current feature is a path-and-fingerprint registry, not an AI file reader. Any future AI-initiated file operation must go through Phase 6's explicit one-time approval model.
