@@ -10,7 +10,7 @@
 .workspace-panel-heading>div,.workspace-editor-heading>div{display:grid;gap:7px}
 .workspace-kicker,.tasks-kicker,.library-kicker{color:#8881a5;font:7px var(--mono);letter-spacing:.12em}
 .workspace-panel-heading strong,.library-list-heading strong,.tasks-panel-heading strong{color:#c9c5dc;font-size:10px;font-weight:600}
-.workspace-search{width:100%;height:35px;margin:15px 0 10px;padding:0 10px;border:1px solid rgba(161,151,206,.14);border-radius:8px;outline:none;color:#e5e0f5;background:rgba(8,9,19,.42);font:9px inherit}
+.workspace-search{width:100%;height:35px;margin:15px 0 10px;padding:0 10px;border:1px solid rgba(161,151,206,.14);border-radius:8px;outline:none;color:#e5e0f5;background:rgba(8,9,19,.42);font:inherit;font-size:9px}
 .workspace-search:focus,.workspace-field input:focus,.workspace-field select:focus,.workspace-field textarea:focus,.task-create-panel input:focus,.task-create-panel textarea:focus,.task-create-panel select:focus,.note-editor-panel input:focus,.note-editor-panel textarea:focus{border-color:rgba(168,121,255,.55);outline:1px solid rgba(168,121,255,.18)}
 .workspace-artifact-list{display:grid;gap:6px;max-height:590px;overflow:auto}
 .workspace-artifact-entry{display:grid;gap:6px;width:100%;padding:11px;border:1px solid transparent;border-radius:8px;color:inherit;background:rgba(255,255,255,.018);cursor:pointer;text-align:left}
