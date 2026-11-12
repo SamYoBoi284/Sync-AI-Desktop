@@ -161,7 +161,25 @@ pub fn run() {
             commands::load_model,
             commands::unload_model,
             commands::generate_chat,
-            commands::cancel_generation
+            commands::cancel_generation,
+            commands::list_workspace_artifacts,
+            commands::get_workspace_artifact,
+            commands::create_workspace_artifact,
+            commands::update_workspace_artifact,
+            commands::delete_workspace_artifact,
+            commands::list_workspace_context,
+            commands::list_tasks,
+            commands::create_task,
+            commands::update_task,
+            commands::delete_task,
+            commands::list_notes,
+            commands::create_note,
+            commands::update_note,
+            commands::delete_note,
+            commands::import_library_file,
+            commands::relink_library_file,
+            commands::list_library_files,
+            commands::remove_library_file
         ])
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir()?;
