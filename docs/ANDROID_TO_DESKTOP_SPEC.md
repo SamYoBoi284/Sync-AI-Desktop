@@ -232,34 +232,32 @@ The source also stores optional local memory, active conversation ID, voice outp
 
 Desktop should persist only settings that have a meaningful desktop implementation. Voice and wake-word preferences should not be surfaced until their corresponding Windows features exist. A stored preference must never imply that an operating-system permission has been granted.
 
-## 7. Conversation persistence and Android backup compatibility
+## 7. Conversation persistence and desktop-native backups
 
-### 7.1 Android data model
+### 7.1 Desktop-owned data model
 
-The existing conversation model contains:
-- Chat: ID, title, creation time, update time, messages.
-- Message: role, text, timestamp, optional diagnostics.
-- Roles: SYSTEM, USER, ASSISTANT.
+The desktop application owns its own chat schema and backup contract. A conversation contains an ID, title, creation/update timestamps and ordered messages. A message contains an ID, chat ID, role, body, timestamp, ordering metadata and optional diagnostics. Each assistant message owns its own diagnostics record, which must survive app restarts and backup restore.
 
-The Android live store is a JSON array. The exported backup is a versioned JSON object with format identifier sync-ai-chat-backup and formatVersion 1. Import also accepts the raw chats.json array format. Existing IDs are skipped rather than overwritten.
+Android sync-ai-chat-backup v1 and raw chats.json compatibility are not requirements. No Android import adapter will be built for this separate application.
 
 ### 7.2 Desktop storage direction
 
 SQLite remains the planned persistence layer; the schema and migration strategy are not implemented. A normalized design should include at least:
 
 - chats: id, title, created_at, updated_at.
-- messages: id, chat_id, role, body, timestamp, diagnostics, and ordering.
-- app_settings: key and serialized value, or an equivalent typed settings store.
-- models: id, display name, canonical path, format, size, SHA-256 and import timestamp.
-- workspace_artifacts: artifact ID, response ID, chat ID, title, language, content, state and timestamps.
+- messages: id, chat_id, role, body, created_at, position, diagnostics_json (nullable; assistant messages only).
+- app_settings: key and serialized value.
+- schema_migrations: applied migration version and timestamp.
+
+Model metadata and Workspace artifacts will be added in their later phases, not as unused Phase 3 tables.
 
 Use foreign keys and transactions for chat/message deletion, backup import and metadata changes. Decide on backup consistency, database migration/versioning and crash-safe writes before implementing the store.
 
-### 7.3 Compatibility requirements
+### 7.3 Desktop backup requirements
 
-A desktop import adapter must read Android backup version 1 and raw chats.json without mutating the source file. It must validate the whole backup before committing changes, enforce reasonable size/count limits, reject invalid roles and malformed records, and skip conflicting IDs rather than overwriting local conversations.
+Use the versioned sync-ai-desktop-backup JSON format with an explicit formatVersion, export timestamp, application metadata and chat records. Export/import preserves diagnostics on each assistant message. Import validates the complete file before committing, enforces size/count limits, rejects malformed records and unsupported future versions, and skips conflicting chat IDs rather than overwriting local conversations. A failed import rolls back completely. The source backup is never modified.
 
-Desktop export should initially preserve the Android-compatible version 1 shape for the shared fields. New desktop-only data should not silently break Android import. Any future format extension needs a documented versioning decision and tests.
+The exact schema and backup contract are defined in docs/PHASE3_DATA_CONTRACT.md.
 
 ## 8. Model management and inference
 
@@ -501,7 +499,11 @@ Avoid creating every proposed folder as empty scaffolding. Add directories as ac
 
 - Design and migrate SQLite schema.
 - Implement chat CRUD, transactional message writes and settings persistence.
-- Add Android backup version 1 import/export tests, duplicate-ID behavior and malformed-backup rejection.
+- Persist and display diagnostics attached to each individual assistant message.
+- Implement History search, rename, delete and reopen flows.
+- Implement versioned desktop-native chat backup export/import, preserving diagnostics.
+- Test malformed backups, unsupported versions, size/count limits, duplicate IDs and transaction rollback.
+- Android backup compatibility is explicitly out of scope.
 
 ### Phase 4 — Model manager and inference spike
 
