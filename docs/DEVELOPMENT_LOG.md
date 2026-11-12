@@ -129,3 +129,16 @@ Chronological record of meaningful implementation sessions. Keep entries factual
 - Connected Stage 3 chat persistence, role-labelled context, token streaming, cancellation, sequential queueing and per-assistant-message diagnostics. Added positional insertion so each answer stays after its triggering user turn.
 - Model-specific templates remain deferred. No auto-load, sign-in startup, multimodal feature set or DAM category added.
 - No frontend/Cargo/Windows/native build or real-model test has run.
+
+
+## 2026-11-12 — Phase 5 Workspace and productivity source implementation
+
+- Added SQLite schema migration v4 for Workspace artifacts, tasks, notes and File Library registry records.
+- Added typed Rust storage models and native commands for Workspace artifact CRUD/search, context selection, Tasks & Notes CRUD, and File Library import/list/relink/remove.
+- Workspace artifacts and notes are included in future local chat prompts only when the user explicitly enables their context checkbox. The combined context query is limited to 20 entries and 48 KiB.
+- Added a “Save to Workspace” action to assistant replies. Newly saved replies default to excluded from chat context.
+- Added Workspace editor/search, Tasks & Notes tabs and controls, and File Library UI.
+- File Library imports use a native picker and register canonical original paths plus file size and SHA-256. The application does not copy, move or delete the original. File contents are not loaded into chat.
+- Activated Workspace, Tasks & Notes and File Library navigation routes. Added responsive styles.
+- Updated the README and Context Tracker, and added Phase 5 data/security documentation.
+- Validation boundary: source consistency was reviewed through the GitHub API. No npm build, TypeScript typecheck, Cargo fmt/check/test, native compilation, Tauri launch or Windows runtime test was run. The Phase 5 source must be validated on the personal Windows development machine.
