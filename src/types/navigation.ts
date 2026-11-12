@@ -25,7 +25,7 @@ export const navigationSections: NavigationSection[] = [
     heading: "CONVERSATIONS",
     entries: [
       { id: "new-chat", label: "New chat", glyph: "+", availability: "available" },
-      { id: "history", label: "History", glyph: "↺", availability: "planned" },
+      { id: "history", label: "History", glyph: "↺", availability: "available" },
     ],
   },
   {
@@ -60,9 +60,9 @@ export const pageTitles: Record<PageId, string> = {
 export const plannedPageCopy: Record<Exclude<PageId, "new-chat" | "runtime">, { eyebrow: string; title: string; description: string; detail: string }> = {
   history: {
     eyebrow: "CONVERSATION STORAGE",
-    title: "Your conversations will live here.",
-    description: "Chat history becomes available when the local conversation database and import workflow are implemented.",
-    detail: "SQLite storage, conversation CRUD and Android backup compatibility are scheduled for the persistence phase.",
+    title: "Your conversations live here.",
+    description: "Browse, search, reopen and manage locally stored conversations.",
+    detail: "Chat storage and versioned desktop backup are being connected in Phase 3.",
   },
   workspace: {
     eyebrow: "WORKSPACE",
