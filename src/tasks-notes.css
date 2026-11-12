@@ -23,7 +23,11 @@
 .task-card-main small{display:block;margin-top:7px;color:#777994;font:7px var(--mono)}
 .task-card-controls{display:flex;align-items:center;gap:6px}
 .task-card-controls select{max-width:115px;padding:6px 7px;border:1px solid rgba(161,151,206,.15);border-radius:6px;color:#c3bdd8;background:#141526;font-size:8px}
-.task-card-controls button{width:25px;height:25px;border:1px solid rgba(255,120,140,.15);border-radius:6px;color:#c894a1;background:rgba(255,120,140,.04);cursor:pointer}
+.task-card-controls button{min-height:27px;padding:0 8px;border:1px solid rgba(161,151,206,.15);border-radius:6px;color:#b9b3ce;background:rgba(255,255,255,.025);cursor:pointer;font-size:8px}
+.task-card-controls .task-edit-button{border-color:rgba(168,121,255,.2);color:#c2afe7;background:rgba(168,121,255,.05)}
+.task-card-controls .task-delete-button{width:27px;padding:0;border-color:rgba(255,120,140,.15);color:#c894a1;background:rgba(255,120,140,.04);font-size:13px}
+.task-cancel-edit{justify-self:start;padding:6px 9px;border:1px solid rgba(161,151,206,.15);border-radius:7px;color:#999bb2;background:rgba(255,255,255,.02);cursor:pointer;font-size:8px}
+.task-cancel-edit:disabled{opacity:.55;cursor:wait}
 .notes-workspace{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(0,1.5fr);gap:14px;align-items:start}
 .notes-list-panel,.note-editor-panel{display:grid;gap:12px}
 .notes-list-panel .tasks-panel-heading button{padding:6px 8px;border:1px solid rgba(168,121,255,.2);border-radius:7px;color:#c2afe7;background:rgba(168,121,255,.05);cursor:pointer;font-size:8px}
