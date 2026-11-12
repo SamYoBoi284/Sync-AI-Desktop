@@ -156,6 +156,7 @@ impl Database {
         let id = Uuid::new_v4().to_string();
         let timestamp = now();
         let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
+        validate_artifact_source(&connection, &input)?;
         connection.execute(
             "INSERT INTO workspace_artifacts
              (id, title, kind, content, source_chat_id, source_message_id, include_in_context, created_at, updated_at)
@@ -493,6 +494,24 @@ fn validate_title(value: &str, label: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn validate_artifact_source(connection: &Connection, input: &NewWorkspaceArtifact) -> Result<(), String> {
+    match (&input.source_chat_id, &input.source_message_id) {
+        (None, None) => Ok(()),
+        (Some(chat_id), Some(message_id)) => {
+            let message_chat_id: Option<String> = connection.query_row(
+                "SELECT chat_id FROM messages WHERE id = ?1",
+                [message_id],
+                |row| row.get(0),
+            ).optional().map_err(db_error)?;
+            if message_chat_id.as_deref() != Some(chat_id.as_str()) {
+                return Err("Workspace source message does not belong to the supplied source conversation.".into());
+            }
+            Ok(())
+        }
+        _ => Err("Workspace source conversation and source message must be supplied together.".into()),
+    }
+}
+
 fn validate_artifact(input: &NewWorkspaceArtifact) -> Result<(), String> {
     validate_title(&input.title, "Artifact title")?;
     if !matches!(input.kind.as_str(), "document" | "code" | "snippet" | "report" | "other") {
@@ -577,6 +596,35 @@ mod tests {
         assert_eq!(notes.len(), 1);
         assert_eq!(notes[0].id, note.id);
         assert_eq!(db.get_note(&note.id).unwrap().content, "Full note body");
+    }
+
+    #[test]
+    fn artifact_source_message_must_belong_to_source_chat() {
+        let db = memory_db();
+        {
+            let connection = db.connection.lock().unwrap();
+            connection.execute(
+                "INSERT INTO chats (id, title, created_at, updated_at) VALUES ('chat-a', 'A', 'now', 'now')",
+                [],
+            ).unwrap();
+            connection.execute(
+                "INSERT INTO chats (id, title, created_at, updated_at) VALUES ('chat-b', 'B', 'now', 'now')",
+                [],
+            ).unwrap();
+            connection.execute(
+                "INSERT INTO messages (id, chat_id, role, body, created_at, position, diagnostics_json) VALUES ('message-a', 'chat-a', 'assistant', 'reply', 'now', 0, NULL)",
+                [],
+            ).unwrap();
+        }
+        let result = db.create_workspace_artifact(NewWorkspaceArtifact {
+            title: "Mismatched source".into(),
+            kind: "document".into(),
+            content: "This source link is invalid.".into(),
+            include_in_context: false,
+            source_chat_id: Some("chat-b".into()),
+            source_message_id: Some("message-a".into()),
+        });
+        assert!(result.is_err());
     }
 
     #[test]
