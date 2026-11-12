@@ -1,0 +1,39 @@
+.tasks-tabs{display:flex;gap:7px;margin:-5px 0 15px;padding:4px;border:1px solid rgba(161,151,206,.12);border-radius:10px;background:rgba(9,10,20,.5);width:max-content}
+.tasks-tabs button{display:flex;align-items:center;gap:9px;padding:8px 12px;border:1px solid transparent;border-radius:7px;color:#9698b0;background:transparent;cursor:pointer;font-size:9px}
+.tasks-tabs button.is-active{border-color:rgba(168,121,255,.22);color:#e9e1ff;background:rgba(168,121,255,.09)}
+.tasks-tabs button span{color:#8783a1;font:7px var(--mono)}
+.tasks-workspace{display:grid;grid-template-columns:minmax(250px,.75fr) minmax(0,1.35fr);gap:14px;align-items:start}
+.task-create-panel,.task-list-panel{display:grid;gap:13px}
+.tasks-panel-heading{padding-bottom:11px;border-bottom:1px solid rgba(161,151,206,.1)}
+.task-create-panel>label,.note-editor-panel>label{gap:6px}
+.task-create-options{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.task-create-options label{display:grid;gap:6px;color:#a9a5bf;font-size:9px}
+.task-create-panel textarea{resize:vertical}
+.task-create-panel input,.task-create-panel textarea,.task-create-panel select,.note-editor-panel input,.note-editor-panel textarea{font-size:9px}
+.task-list{display:grid;gap:8px}
+.task-card{display:flex;align-items:flex-start;gap:12px;padding:13px;border:1px solid rgba(161,151,206,.1);border-radius:9px;background:rgba(255,255,255,.018)}
+.task-card--done{opacity:.66}
+.task-card-main{min-width:0;flex:1}
+.task-title-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.task-title-line strong{color:#ded9ee;font-size:10px}
+.task-card--done .task-title-line strong{text-decoration:line-through;color:#9b98ad}
+.task-priority{padding:3px 5px;border:1px solid rgba(161,151,206,.14);border-radius:99px;color:#9493ad;font:6px var(--mono);text-transform:uppercase}
+.task-priority--high{border-color:rgba(255,120,140,.22);color:#dca0aa}.task-priority--low{color:#8d9caa}
+.task-card-main p{margin:7px 0;color:#999bb2;font-size:9px;line-height:1.6;white-space:pre-wrap}
+.task-card-main small{display:block;margin-top:7px;color:#777994;font:7px var(--mono)}
+.task-card-controls{display:flex;align-items:center;gap:6px}
+.task-card-controls select{max-width:115px;padding:6px 7px;border:1px solid rgba(161,151,206,.15);border-radius:6px;color:#c3bdd8;background:#141526;font-size:8px}
+.task-card-controls button{width:25px;height:25px;border:1px solid rgba(255,120,140,.15);border-radius:6px;color:#c894a1;background:rgba(255,120,140,.04);cursor:pointer}
+.notes-workspace{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(0,1.5fr);gap:14px;align-items:start}
+.notes-list-panel,.note-editor-panel{display:grid;gap:12px}
+.notes-list-panel .tasks-panel-heading button{padding:6px 8px;border:1px solid rgba(168,121,255,.2);border-radius:7px;color:#c2afe7;background:rgba(168,121,255,.05);cursor:pointer;font-size:8px}
+.note-list-entry{display:grid;gap:6px;width:100%;padding:11px;border:1px solid transparent;border-radius:8px;color:inherit;background:rgba(255,255,255,.018);cursor:pointer;text-align:left}
+.note-list-entry:hover,.note-list-entry.is-active{border-color:rgba(168,121,255,.25);background:rgba(168,121,255,.055)}
+.note-list-entry strong{color:#dcd7ec;font-size:9px}
+.note-list-entry small{color:#7e809a;font:7px var(--mono)}
+.note-content-label textarea{min-height:310px;resize:vertical;line-height:1.65}
+.note-option{display:flex!important;grid-template-columns:none;align-items:center;gap:8px!important;color:#aba7c1!important}
+.note-option input{width:auto;accent-color:#a879ff}
+.notes-context-hint{margin:0;color:#8587a3;font-size:8px;line-height:1.6}
+@media(max-width:850px){.tasks-workspace,.notes-workspace{grid-template-columns:1fr}}
+@media(max-width:560px){.task-card{flex-direction:column}.task-card-controls{width:100%;justify-content:flex-end}.task-create-options{grid-template-columns:1fr}}
