@@ -14,7 +14,7 @@
 
 ## 2. Current status
 
-**Phase:** 3 — local data foundation (source implementation in progress; validation pending)  
+**Phase:** 4 — local model engine, Stage 1 source committed; validation pending  
 **Status:** SQLite schema/migration v1, Rust chat/message/settings commands, per-assistant-message diagnostics persistence, versioned desktop backup validation/import/export, and a connected History UI are committed to main. Android backup compatibility is out of scope. No frontend build, Cargo test/check or Windows runtime test has been run.
 
 ### Verified in this repository
@@ -385,3 +385,14 @@ Continue Phase 3 validation and hardening:
 3. **Chat inference connection:** streaming, queueing, cancellation, context handling and per-assistant-message diagnostics.
 
 Workspace, File Library, Tasks & Notes and broader resource metrics remain Phase 5. No 4.1/4.2/4.3-style micro-numbering will be used.
+
+
+## Phase 4 — Stage 1 implementation source committed
+
+- Added SQLite schema migration v2 with a local GGUF model registry, SHA-256 uniqueness and a single-default-model constraint.
+- Added native GGUF file selection in Rust (native file picker; no arbitrary file path accepted from the webview), managed copy into the application data models directory, streaming SHA-256 calculation, duplicate detection, registry listing, default selection and safe managed-file removal.
+- Added host RAM detection using system memory APIs exposed by sysinfo; reports installed and currently available bytes.
+- Settings now exposes an optional RAM Limiter toggle and GB slider, disabled by default. Settings are persisted through the existing SQLite settings table. Slider maximum is based on detected physical RAM; suggested initial budget reserves approximately 3 GB for the OS and other applications.
+- Important: Stage 1 stores the inference budget preference and presents hardware readings. It does not yet enforce model-load memory allocation. Pre-load enforcement and model resource estimation are Stage 2 work; this is not a hard OS process cap.
+- Local Models page supports importing GGUF files, SHA-256 duplicate detection, setting a default and removing managed model files. Architecture/quantization remain unknown until GGUF metadata parsing is implemented.
+- Validation: source committed only. Rust/Cargo, npm build and Windows runtime not run. Native picker and sysinfo APIs require validation on the user's personal Windows development machine.

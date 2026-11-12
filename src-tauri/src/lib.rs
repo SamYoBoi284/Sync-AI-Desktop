@@ -143,7 +143,12 @@ pub fn run() {
             commands::export_chat_backup,
             commands::import_chat_backup,
             commands::get_setting,
-            commands::set_setting
+            commands::set_setting,
+            commands::get_host_ram_info,
+            commands::list_models,
+            commands::import_gguf,
+            commands::set_default_model,
+            commands::remove_model
         ])
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir()?;

@@ -26,13 +26,15 @@ The sidebar now includes searchable recent conversations sourced from SQLite His
 
 The New chat composer remains intentionally disabled until local inference is connected. Chat storage and History source are implemented in Phase 3; Windows runtime validation remains pending.
 
+**Phase 4 Stage 1 source is committed.** The GGUF model registry/import UI, SHA-256 deduplication, managed model storage, default selection/removal and host RAM detection are now implemented in source. The optional RAM Limiter preference is persisted in SQLite; model-load enforcement remains Stage 2 work. No build/runtime validation has been performed.
+
 **Phase 3 implementation source is committed.** The repository now contains the SQLite storage layer, typed Rust commands, per-message diagnostics data model, desktop backup validation/round-trip tests, and a connected History UI with search, rename, delete, import and export source. These changes have not been built or runtime-tested yet. Android backup compatibility is explicitly out of scope.
 
 Not implemented yet:
 - Individual Settings controls and preferences UI (the Settings destination is currently a staged page)
 - Chat generation, streaming, queueing and cancellation
 - Windows build/runtime validation of the new SQLite and History implementation
-- GGUF model import/load/unload and llama.cpp inference
+- GGUF model loading/unloading and llama.cpp inference (registry/import source now implemented)
 - Workspace storage
 - File Library or Tasks & Notes functionality
 - Voice, camera or recorder features
@@ -42,7 +44,7 @@ Not implemented yet:
 
 Phase 4 is deliberately organized into **three stages only**:
 
-1. Model management: GGUF import, hashing, deduplication, metadata, selection/removal, hardware RAM detection and an optional user-enabled managed inference RAM budget.
+1. Model management: GGUF import, hashing, deduplication, metadata, selection/removal, hardware RAM detection and an optional user-enabled managed inference RAM budget. **Stage 1 source is committed; Windows validation pending.**
 2. Native runtime: Windows llama.cpp integration, model load/unload, memory estimates and pre-load safeguards.
 3. Chat inference: streaming, queueing, cancellation, context handling and diagnostics attached to each assistant message.
 

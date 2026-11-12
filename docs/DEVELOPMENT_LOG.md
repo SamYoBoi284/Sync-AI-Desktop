@@ -82,3 +82,14 @@ Chronological record of meaningful implementation sessions. Keep entries factual
 - Kept workspace and system destinations in the main navigation and preserved the local-first footer.
 - No separate frontend-only history cache or duplicate persistence layer was added.
 - Validation: source reviewed and committed. No npm build, Cargo check, Tauri launch or Windows UI test was run.
+
+
+## 2026-11-12 — Phase 4 Stage 1: model management and resource budget
+
+- Added schema migration v2 and a GGUF model registry with SHA-256 uniqueness and a single default model.
+- Added Rust commands for native file selection/import, managed model copy, streaming SHA-256, duplicate detection, listing, default selection and managed model removal.
+- Added host installed/available RAM detection.
+- Added the Local Models management page and optional RAM Limiter controls in Settings. The limiter is disabled by default and its selected budget persists through SQLite.
+- Kept Stage 1 honest about its boundary: the RAM budget is not yet enforced during model loading. Memory estimation and pre-load enforcement belong to Stage 2.
+- No arbitrary filesystem path is accepted from the webview for model import; Rust opens the native picker itself.
+- Validation: source committed only. No npm build, Cargo check/test or Windows runtime test run.

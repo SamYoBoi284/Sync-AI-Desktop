@@ -229,3 +229,8 @@ Phase 4 is intentionally limited to **three stages**, with no additional numbere
 3. **Chat inference connection:** streamed generation, queueing, cancellation, context handling and diagnostics attached to each assistant message.
 
 Workspace, File Library, Tasks & Notes and broader resource metrics move to Phase 5. This keeps Phase 4 broad enough to deliver a usable local chat loop without fragmenting it into micro-stages.
+
+
+## 16. Phase 4 Stage 1 — model registry and resource budget
+
+The first Stage 1 implementation adds a SQLite v2 model registry, native GGUF file selection in Rust, managed application-data copies, SHA-256 duplicate detection, default-model selection and managed-file removal. The webview does not submit arbitrary filesystem paths to the import command. Host RAM detection reports installed and available memory. The Settings RAM Limiter toggle and budget are persisted in SQLite and default to disabled. Stage 1 does not yet enforce memory limits during model loading; resource estimation and pre-load refusal belong to Stage 2. This budget is not an OS-enforced process cap.

@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use self::models::{
     BackupAppInfo, BackupChat, BackupDocument, BackupMessage, ChatDetail, ChatMessage,
-    ChatSummary, ImportSummary, MessageDiagnostics, MessageRole, NewMessage,
+    ChatSummary, ImportSummary, MessageDiagnostics, MessageRole, NewMessage, ModelRecord,
 };
 
 const BACKUP_FORMAT: &str = "sync-ai-desktop-backup";
@@ -164,6 +164,54 @@ impl Database {
         Ok(ImportSummary { imported_chats: imported, skipped_existing_chats: skipped })
     }
 
+
+    pub fn list_models(&self) -> Result<Vec<ModelRecord>, String> {
+        let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
+        let mut statement = connection.prepare("SELECT id, name, file_name, size_bytes, sha256, architecture, quantization, imported_at, is_default FROM models ORDER BY imported_at DESC").map_err(db_error)?;
+        let rows = statement.query_map([], |row| Ok(ModelRecord {
+            id: row.get(0)?, name: row.get(1)?, file_name: row.get(2)?, size_bytes: row.get(3)?,
+            sha256: row.get(4)?, architecture: row.get(5)?, quantization: row.get(6)?,
+            imported_at: row.get(7)?, is_default: row.get::<_, i64>(8)? != 0,
+        })).map_err(db_error)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(db_error)
+    }
+    pub fn find_model_by_hash(&self, hash: &str) -> Result<Option<ModelRecord>, String> {
+        let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
+        connection.query_row("SELECT id, name, file_name, size_bytes, sha256, architecture, quantization, imported_at, is_default FROM models WHERE sha256 = ?1",
+            [hash], |row| Ok(ModelRecord {
+                id: row.get(0)?, name: row.get(1)?, file_name: row.get(2)?, size_bytes: row.get(3)?,
+                sha256: row.get(4)?, architecture: row.get(5)?, quantization: row.get(6)?,
+                imported_at: row.get(7)?, is_default: row.get::<_, i64>(8)? != 0,
+            })).optional().map_err(db_error)
+    }
+    pub fn register_model(&self, model: &ModelRecord, relative_path: &str) -> Result<(), String> {
+        let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
+        let exists: bool = connection.query_row("SELECT EXISTS(SELECT 1 FROM models)", [], |r| r.get(0)).map_err(db_error)?;
+        connection.execute("INSERT INTO models (id, name, file_name, relative_path, size_bytes, sha256, architecture, quantization, imported_at, is_default) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            params![model.id, model.name, model.file_name, relative_path, model.size_bytes, model.sha256, model.architecture, model.quantization, model.imported_at, if exists { 0 } else { 1 }]).map_err(db_error)?;
+        Ok(())
+    }
+    pub fn set_default_model(&self, model_id: &str) -> Result<(), String> {
+        let mut connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
+        let tx = connection.transaction().map_err(db_error)?;
+        let exists: bool = tx.query_row("SELECT EXISTS(SELECT 1 FROM models WHERE id = ?1)", [model_id], |r| r.get(0)).map_err(db_error)?;
+        if !exists { return Err("Model not found".into()); }
+        tx.execute("UPDATE models SET is_default = 0", []).map_err(db_error)?;
+        tx.execute("UPDATE models SET is_default = 1 WHERE id = ?1", [model_id]).map_err(db_error)?;
+        tx.commit().map_err(db_error)
+    }
+    pub fn model_relative_path(&self, model_id: &str) -> Result<String, String> {
+        let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
+        connection.query_row("SELECT relative_path FROM models WHERE id = ?1", [model_id], |r| r.get(0))
+            .optional().map_err(db_error)?.ok_or_else(|| "Model not found".into())
+    }
+    pub fn delete_model_record(&self, model_id: &str) -> Result<(), String> {
+        let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
+        let changed = connection.execute("DELETE FROM models WHERE id = ?1", [model_id]).map_err(db_error)?;
+        if changed == 0 { return Err("Model not found".into()); }
+        Ok(())
+    }
+
     pub fn set_setting(&self, key: String, value_json: String) -> Result<(), String> {
         if key.trim().is_empty() || key.len() > 128 || value_json.len() > 64 * 1024 { return Err("Invalid setting key or value size".into()); }
         serde_json::from_str::<serde_json::Value>(&value_json).map_err(|_| "Setting value must be valid JSON".to_string())?;
@@ -183,8 +231,8 @@ fn migrate(connection: &Connection) -> Result<(), String> {
     connection.execute_batch(
         "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);"
     ).map_err(db_error)?;
-    let version: u32 = connection.query_row("SELECT COALESCE(MAX(version), 0) FROM schema_migrations", [], |r| r.get(0)).map_err(db_error)?;
-    if version > 1 { return Err("Database schema is newer than this application version".into()); }
+    let mut version: u32 = connection.query_row("SELECT COALESCE(MAX(version), 0) FROM schema_migrations", [], |r| r.get(0)).map_err(db_error)?;
+    if version > 2 { return Err("Database schema is newer than this application version".into()); }
     if version < 1 {
         let tx = connection.unchecked_transaction().map_err(db_error)?;
         tx.execute_batch(
@@ -214,6 +262,19 @@ fn migrate(connection: &Connection) -> Result<(), String> {
              );"
         ).map_err(db_error)?;
         tx.execute("INSERT INTO schema_migrations (version, applied_at) VALUES (1, ?1)", [now()]).map_err(db_error)?;
+        tx.commit().map_err(db_error)?;
+        version = 1;
+    }
+    if version < 2 {
+        let tx = connection.unchecked_transaction().map_err(db_error)?;
+        tx.execute_batch("CREATE TABLE models (
+            id TEXT PRIMARY KEY, name TEXT NOT NULL, file_name TEXT NOT NULL,
+            relative_path TEXT NOT NULL UNIQUE, size_bytes INTEGER NOT NULL CHECK(size_bytes > 0),
+            sha256 TEXT NOT NULL UNIQUE, architecture TEXT NULL, quantization TEXT NULL,
+            imported_at TEXT NOT NULL, is_default INTEGER NOT NULL DEFAULT 0 CHECK(is_default IN (0, 1))
+        ); CREATE UNIQUE INDEX idx_models_single_default ON models(is_default) WHERE is_default = 1;")
+            .map_err(db_error)?;
+        tx.execute("INSERT INTO schema_migrations (version, applied_at) VALUES (2, ?1)", [now()]).map_err(db_error)?;
         tx.commit().map_err(db_error)?;
     }
     Ok(())

@@ -6,6 +6,7 @@ import { NewChatPage } from "./pages/NewChatPage";
 import { RuntimePage } from "./pages/RuntimePage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { LocalModelsPage } from "./pages/LocalModelsPage";
 import { getAppInfo, type AppInfo } from "./services/nativeBridge";
 import type { PageId } from "./types/navigation";
 import { LoadingScreen } from "./components/startup/LoadingScreen";
@@ -80,6 +81,8 @@ function App({ showStartupSplash }: AppProps) {
               <HistoryPage key={selectedChatId ?? "history"} initialChatId={selectedChatId} />
             ) : activePage === "settings" ? (
               <SettingsPage onNavigate={navigateToPage} />
+            ) : activePage === "models" ? (
+              <LocalModelsPage />
             ) : activePage === "runtime" ? (
               <RuntimePage bridgeKind={bridgeKind} info={appInfo} />
             ) : (

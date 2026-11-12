@@ -136,3 +136,13 @@ export function appendMessage(chatId: string, message: { role: MessageRole; body
 export function updateMessageDiagnostics(chatId: string, messageId: string, diagnostics: MessageDiagnostics): Promise<void> {
   return invoke<void>("update_message_diagnostics", { chatId, messageId, diagnostics });
 }
+
+
+export interface HostRamInfo { totalBytes: number; availableBytes: number; }
+export interface ModelRecord { id: string; name: string; fileName: string; sizeBytes: number; sha256: string; architecture: string | null; quantization: string | null; importedAt: string; isDefault: boolean; }
+export interface ModelImportResult { model: ModelRecord; duplicate: boolean; }
+export function getHostRamInfo(): Promise<HostRamInfo> { return invoke<HostRamInfo>("get_host_ram_info"); }
+export function listModels(): Promise<ModelRecord[]> { return invoke<ModelRecord[]>("list_models"); }
+export function importGguf(): Promise<ModelImportResult | null> { return invoke<ModelImportResult | null>("import_gguf"); }
+export function setDefaultModel(modelId: string): Promise<void> { return invoke<void>("set_default_model", { modelId }); }
+export function removeModel(modelId: string): Promise<void> { return invoke<void>("remove_model", { modelId }); }

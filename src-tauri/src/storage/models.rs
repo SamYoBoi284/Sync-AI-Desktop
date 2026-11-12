@@ -126,3 +126,12 @@ pub struct ImportSummary {
     pub imported_chats: u64,
     pub skipped_existing_chats: u64,
 }
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelRecord {
+    pub id: String, pub name: String, pub file_name: String, pub size_bytes: u64,
+    pub sha256: String, pub architecture: Option<String>, pub quantization: Option<String>,
+    pub imported_at: String, pub is_default: bool,
+}
