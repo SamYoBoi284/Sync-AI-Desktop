@@ -156,9 +156,13 @@ The desktop process owns this lifecycle; React only presents the startup state.
 Created in the repository:
 - React 19 + TypeScript 6 frontend structure with Vite 8 tooling.
 - Tauri 2 Rust application entry point.
-- One read-only command, get_app_info, returning static app version, OS and architecture metadata.
-- Typed frontend bridge for that command.
-- Responsive foundation screen showing native-bridge or browser-preview state.
+- Read-only get_app_info command returning static app version, OS and architecture metadata.
+- consume_startup_splash command backed by a Rust atomic gate.
+- Typed frontend bridge for both commands.
+- Persistent React sidebar with functional page navigation and page-aware top bar.
+- Chat landing screen with Sync Core-inspired artwork and a disabled composer until model integration.
+- Staging pages for History, Workspace, Tasks & Notes, File Library, Local Models and Appearance.
+- Runtime page that displays only metadata returned by the Rust bridge.
 - First-process startup splash with an atomic Rust gate so tray restores and same-process webview reloads do not replay it.
 - Rust single-instance plugin registration and main-window focus/restore callback.
 - Native system tray with generated Sync mark, Open/Hide/Exit actions, left-click restore where supported, and close-to-tray behavior.
@@ -168,7 +172,7 @@ Created in the repository:
 - No shell, filesystem, process, opener or other plugin surface.
 - Tauri bundling disabled until icon assets and installer decisions are ready.
 
-The metadata command does not inspect user files or perform privileged operations. The frontend navigation labels are explicitly marked planned and are not functional routes.
+The metadata and splash-gate commands do not inspect user files or perform privileged operations. Sidebar navigation is functional, but the feature pages do not claim that their storage, inference or OS services are connected.
 
 ## 12. Current code organization
 
@@ -176,6 +180,13 @@ The metadata command does not inspect user files or perform privileged operation
 src/
   App.tsx
   main.tsx
+  components/
+    navigation/Sidebar.tsx
+    pages/
+      ChatPage.tsx
+      FeaturePage.tsx
+      RuntimePage.tsx
+    startup/LoadingScreen.tsx
   services/
     nativeBridge.ts
   styles.css
@@ -206,4 +217,4 @@ Additional folders will be created as implementation boundaries are needed; do n
 
 ## 14. Validation status
 
-The scaffold has been committed to GitHub and the source files have been retrieved for verification. The project has not yet been built on Windows in this session. Dependency installation, npm typecheck/build, cargo check, Tauri development launch, single-instance forwarding, tray interactions, close-to-tray behavior and installer packaging are therefore unverified.
+The scaffold, lifecycle slice and navigable desktop shell have been committed to GitHub and the source files have been retrieved for review. The project has not yet been built on Windows in this session. Dependency installation, npm typecheck/build, cargo check, Tauri development launch, single-instance forwarding, tray interactions, close-to-tray behavior and installer packaging are therefore unverified.

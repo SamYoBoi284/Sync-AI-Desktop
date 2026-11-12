@@ -40,3 +40,15 @@ Chronological record of meaningful implementation sessions. Keep entries factual
 - Added a Rust-created native tray icon with Open, Hide and Exit actions. Left-click restores where supported; closing the main window hides it to tray.
 - Updated architecture, project tracker and README with source-versus-runtime status.
 - Validation: GitHub source and branch were inspected; no npm install, frontend build, Cargo check, Tauri launch or Windows interaction test was run. The code is committed but runtime-unverified.
+
+
+## 2026-11-12 — Phase 2 desktop shell and navigation
+
+- Replaced the static foundation/status page with a persistent navigation sidebar and page-aware top bar.
+- Added functional navigation destinations for Chat, History, Workspace, Tasks & Notes, File Library, Local models, Appearance and Runtime.
+- Built a dedicated chat landing screen with Sync Core-inspired visual treatment, model status and a disabled composer. No model response is fabricated.
+- Added feature staging pages that describe intended responsibilities without claiming their underlying services are implemented.
+- Added a runtime page that displays only metadata available from the existing Rust bridge.
+- Added responsive layouts, keyboard focus treatment and reduced-motion styling.
+- Updated README, architecture and the context tracker.
+- Validation: source files and branch state were reviewed before commit. No TypeScript build, Rust build, Tauri launch or Windows runtime test was run.

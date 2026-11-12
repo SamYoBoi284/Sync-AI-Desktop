@@ -14,8 +14,8 @@
 
 ## 2. Current status
 
-**Phase:** 2 — desktop lifecycle foundation (first slice)  
-**Status:** Phase 1 source remains committed. The first Phase 2 slice now adds a first-process startup splash, Rust single-instance enforcement, a native tray icon/menu, close-to-tray behavior and restore/focus handling. These changes are source-committed but have not been built or run on Windows. Chat, inference, persistence and computer-control features are not implemented.
+**Phase:** 2 — desktop shell and navigation  
+**Status:** Phase 2 now includes the startup/tray lifecycle and a navigable React desktop shell. Sidebar destinations switch between the chat landing screen, history, workspace, tasks/notes, file library, local models, appearance and runtime pages. These are source-implemented but not built or run on Windows. Chat generation, storage, model management and computer-control features remain unimplemented.
 
 ### Verified in this repository
 
@@ -23,10 +23,11 @@
 - Detailed Android-to-desktop port specification is committed at docs/ANDROID_TO_DESKTOP_SPEC.md.
 - React + TypeScript + Vite frontend files are committed.
 - Tauri 2 Rust source/configuration files are committed.
-- get_app_info is registered as the only custom Rust command.
+- Rust registers get_app_info and consume_startup_splash as custom commands.
 - The main-window capability contains core:default only.
 - No shell, filesystem, process or opener plugin is added.
-- The frontend status page distinguishes the native bridge from browser preview.
+- The frontend distinguishes the native bridge from browser preview.
+- Sidebar navigation is functional in the frontend; feature pages accurately identify services that are not implemented.
 - Rust registers the Tauri single-instance plugin first and restores/focuses the existing main window on subsequent process launches.
 - Rust owns an atomic startup-splash gate consumed once per process.
 - A native tray menu provides Open, Hide and Exit; left-click restores where supported.
@@ -42,7 +43,7 @@
 - Tauri development launch on Windows
 - Cargo check/build on Windows
 - SQLite schema or migrations
-- Chat persistence or Android backup import/export
+- Chat generation, message persistence or Android backup import/export
 - GGUF model manager
 - llama.cpp Windows build/integration
 - Workspace, File Library, Tasks & Notes or voice
@@ -156,7 +157,11 @@ Key desktop decisions:
 | vite.config.ts | React plugin, fixed dev port 1420, Tauri environment variables, platform build target and file-watch exclusion |
 | tsconfig.json / tsconfig.node.json | Strict frontend and Vite configuration TypeScript |
 | src/main.tsx | React root |
-| src/App.tsx | Foundation UI, planned navigation labels, runtime bridge status |
+| src/App.tsx | App shell, active-page state, shared top bar and runtime bridge status |
+| src/components/navigation/Sidebar.tsx | Functional sidebar navigation and navigation metadata |
+| src/components/pages/ChatPage.tsx | Chat landing screen and inactive composer shell |
+| src/components/pages/FeaturePage.tsx | Explicitly staged history/workspace/tasks/files/models/appearance destinations |
+| src/components/pages/RuntimePage.tsx | Read-only display of currently available native metadata |
 | src/styles.css | Responsive baseline and reduced-motion handling |
 | src/services/nativeBridge.ts | Typed call to the Rust metadata command |
 | src-tauri/Cargo.toml | Rust/Tauri dependencies |
@@ -167,7 +172,7 @@ Key desktop decisions:
 | src-tauri/tauri.conf.json | Main window, Vite commands, restrictive CSP, packaging disabled |
 | src-tauri/capabilities/main.json | Minimal main-window capability (core:default only) |
 
-The status/navigation screen is a foundation placeholder, not an implemented chat UI. Navigation labels are explicitly planned and inert; the screen must not imply those features work.
+The sidebar and page navigation are functional frontend behavior. The chat destination is a visual shell only: its composer is disabled until model integration exists. History, Workspace, Tasks & Notes, File Library, Local Models and Appearance currently explain their planned responsibilities; their backing services are not connected.
 
 Tauri packaging is disabled pending an app icon and installer configuration. No external font/CDN is used; the UI stylesheet is local. No privileged plugin is installed.
 
@@ -202,7 +207,7 @@ Tauri capabilities are an additional boundary, not a replacement for per-operati
 
 1. Phase 0 — Repository foundation and source-to-desktop spec. Complete.
 2. Phase 1 — Tauri 2 + React + TypeScript + Vite scaffold and minimal metadata IPC command. Source committed; builds not yet verified.
-3. Phase 2 — Desktop shell, startup/tray lifecycle, sidebar, chat UI, Sync Core, themes and settings. Startup splash, single-instance and tray lifecycle source are implemented; Windows validation is pending.
+3. Phase 2 — Desktop shell, startup/tray lifecycle, sidebar, chat UI, Sync Core, themes and settings. Startup/tray lifecycle and navigable shell source are implemented; chat services and Windows validation are pending.
 4. Phase 3 — SQLite schema/migrations, chat CRUD, Android backup import/export.
 5. Phase 4 — GGUF manager and minimal Windows llama.cpp FFI proof of concept.
 6. Phase 5 — Streamed local inference, Workspace, File Library, Tasks & Notes and resource metrics.
@@ -279,3 +284,34 @@ On the personal Windows development machine only, verify Node.js 22.12+ (or 20.1
 - Source files and repository branch head were inspected before editing.
 - No npm install, frontend build, Cargo check, Tauri launch or Windows interaction test was run in this environment.
 - Treat all new behavior as implemented in source but not yet runtime-verified.
+
+
+## 15. Phase 2 desktop shell and navigation — 2026-11-12
+
+### Implemented in source
+- Replaced the static foundation screen with a persistent desktop sidebar and page-aware top bar.
+- Added frontend navigation for New chat, History, Workspace, Tasks & Notes, File Library, Local models, Appearance and Runtime.
+- Added a chat landing screen with Sync Core-inspired artwork, model status and an intentionally disabled composer until inference is connected.
+- Added dedicated staging pages for the not-yet-connected feature areas. Each page distinguishes planned behavior from implemented services.
+- Added a runtime page that displays only metadata actually returned by the existing Rust command.
+- Added responsive layouts, keyboard focus styling and reduced-motion handling.
+
+### Changed files
+- \`src/App.tsx\`
+- \`src/styles.css\`
+- \`src/components/navigation/Sidebar.tsx\` (new)
+- \`src/components/pages/ChatPage.tsx\` (new)
+- \`src/components/pages/FeaturePage.tsx\` (new)
+- \`src/components/pages/RuntimePage.tsx\` (new)
+- \`README.md\`
+- \`CONTEXT_TRACKER.md\`
+- \`docs/ARCHITECTURE.md\`
+- \`docs/DEVELOPMENT_LOG.md\`
+
+### Validation
+- Source changes are committed to GitHub after review of the previous main-branch files.
+- No dependency installation, TypeScript build, Rust build, Tauri launch or Windows UI test has been run from this environment.
+- The navigation is implemented in React source; native runtime and feature backends remain unverified or unimplemented.
+
+### Exact next implementation step
+- Build the chat interaction layer and Sync Core state component without faking model output: define message/composer state and queue/stop UI contracts, then connect them to the Rust runtime only when the inference interface exists.

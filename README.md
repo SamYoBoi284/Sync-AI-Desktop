@@ -20,13 +20,13 @@ The frontend recreates and adapts the Android application's visual language and 
 
 ## Current development status
 
-**Phase 1 foundation scaffold created.** The repository now contains a Tauri 2 + React + TypeScript + Vite app shell and a minimal Rust metadata command. The initial screen is deliberately a foundation/status page, not a working chat application.
+**Phase 2 desktop shell in progress.** The repository now includes the Tauri startup/tray lifecycle and a navigable React desktop shell with a chat landing screen, history, workspace, file, model, appearance and runtime destinations. These screens establish navigation and interaction structure; they do not imply that the underlying chat, storage or model services are connected.
 
 Not implemented yet:
-- Interactive chat UI, chat persistence or local inference
+- Chat generation, message persistence or local inference (the chat destination is currently a non-functional UI shell)
 - GGUF model import/load/unload
-- SQLite or Workspace storage
-- File Library or Tasks & Notes
+- SQLite or Workspace storage services
+- File Library or Tasks & Notes services
 - Voice, camera or recorder features
 - Host-computer tools or approval execution
 
