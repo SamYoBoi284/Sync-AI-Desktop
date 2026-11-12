@@ -28,7 +28,7 @@
 - Phase 4 remains exactly three stages: original-path GGUF registry; isolated CPU llama.cpp worker with optional Windows Job Object private-commit cap; SQLite-backed streaming chat with cancellation, sequential queueing and per-message diagnostics.
 - Phase 5 Workspace supports artifact create/search/edit/delete and saving assistant replies.
 - Tasks & Notes supports task create/status/priority/due-date/delete and note create/edit/pin/delete.
-- Only notes and Workspace artifacts explicitly marked for context enter future local prompts. The combined selected context is capped at 48 KiB and 20 entries.
+- Only notes and Workspace artifacts explicitly marked for context enter future local prompts. The combined selected context query is capped at 48 KiB and 20 entries; the inference worker then enforces the smaller 2,048-token model context (512 reserved for output) and trims oldest prompt tokens when needed.
 - File Library uses a native file picker, canonical original paths, size and SHA-256. Relink updates the registered path; remove deletes only the registry record. The original file is not moved or deleted.
 - File Library metadata is not currently passed to the model and file contents are not read into chat.
 - Workspace, tasks, notes and File Library data are not currently included in the Phase 3 chat backup format.
