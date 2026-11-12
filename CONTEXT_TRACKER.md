@@ -397,7 +397,7 @@ Workspace, File Library, Tasks & Notes and broader resource metrics remain Phase
 - Added native GGUF file selection in Rust (native file picker; no arbitrary file path accepted from the webview), managed copy into the application data models directory, streaming SHA-256 calculation, duplicate detection, registry listing, default selection and safe managed-file removal.
 - Added host RAM detection using system memory APIs exposed by sysinfo; reports installed and currently available bytes.
 - Settings now exposes an optional RAM Limiter toggle and GB slider, disabled by default. Settings are persisted through the existing SQLite settings table. Slider maximum is based on detected physical RAM; suggested initial budget reserves approximately 3 GB for the OS and other applications.
-- Important: Stage 1 stores the inference budget preference and presents hardware readings. It does not yet enforce model-load memory allocation. Pre-load enforcement and model resource estimation are Stage 2 work; this is not a hard OS process cap.
+- Stage 1 milestone note: at that point the inference budget was only persisted and displayed. Phase 4 Stage 2, documented below, now consumes the setting during model-load preflight and adds native session sizing. This remains an application-level guard, not a hard OS process cap.
 - Local Models page supports importing GGUF files, SHA-256 duplicate detection, setting a default and removing managed model files. Architecture/quantization remain unknown until GGUF metadata parsing is implemented.
 - Validation: source committed only. Rust/Cargo, npm build and Windows runtime not run. Native picker and sysinfo APIs require validation on the user's personal Windows development machine.
 
