@@ -314,4 +314,37 @@ mod tests {
         let config = RamLimiterConfig::from_json(Some(r#"{"enabled":true,"limitGb":3}"#.into())).unwrap();
         assert_eq!(config.budget_bytes(), Some(3 * GIB));
     }
+
+    #[test]
+    fn preflight_refuses_models_over_the_configured_budget() {
+        let estimate = ModelResourceEstimate {
+            model_size_bytes: 3 * GIB,
+            estimated_peak_bytes: 5 * GIB,
+            available_ram_bytes: 8 * GIB,
+            configured_budget_bytes: Some(4 * GIB),
+            context_length: DEFAULT_CONTEXT_LENGTH,
+            batch_size: DEFAULT_BATCH_SIZE,
+            fits_configured_budget: false,
+            fits_current_availability: true,
+            estimate_kind: "test".into(),
+        };
+        assert!(validate_preflight(&estimate).unwrap_err().contains("RAM Limiter"));
+    }
+
+    #[test]
+    fn preflight_refuses_models_that_leave_no_system_reserve() {
+        let estimate = ModelResourceEstimate {
+            model_size_bytes: 2 * GIB,
+            estimated_peak_bytes: 3 * GIB,
+            available_ram_bytes: 3 * GIB,
+            configured_budget_bytes: None,
+            context_length: DEFAULT_CONTEXT_LENGTH,
+            batch_size: DEFAULT_BATCH_SIZE,
+            fits_configured_budget: true,
+            fits_current_availability: false,
+            estimate_kind: "test".into(),
+        };
+        assert!(validate_preflight(&estimate).unwrap_err().contains("currently available RAM"));
+    }
+}
 }
