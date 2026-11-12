@@ -173,6 +173,7 @@ pub fn run() {
             commands::update_task,
             commands::delete_task,
             commands::list_notes,
+            commands::get_note,
             commands::create_note,
             commands::update_note,
             commands::delete_note,
