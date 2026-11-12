@@ -207,7 +207,7 @@ Additional folders will be created as implementation boundaries are needed; do n
 
 ## 13. Open implementation decisions
 
-- SQLite schema and migration approach.
+- SQLite migration hardening, rollback tests and Windows runtime validation.
 - llama.cpp build configuration and FFI wrapper.
 - Minimum supported Windows version and CPU baseline.
 - Scoped file access model and import strategy.
