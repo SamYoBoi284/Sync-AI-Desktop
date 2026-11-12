@@ -184,6 +184,7 @@ fn migrate(connection: &Connection) -> Result<(), String> {
         "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);"
     ).map_err(db_error)?;
     let version: u32 = connection.query_row("SELECT COALESCE(MAX(version), 0) FROM schema_migrations", [], |r| r.get(0)).map_err(db_error)?;
+    if version > 1 { return Err("Database schema is newer than this application version".into()); }
     if version < 1 {
         let tx = connection.unchecked_transaction().map_err(db_error)?;
         tx.execute_batch(
@@ -271,14 +272,14 @@ fn validate_backup(backup: &BackupDocument) -> Result<(), String> {
     for chat in &backup.chats {
         if chat.id.is_empty() || chat.id.len() > 128 || !chat_ids.insert(chat.id.as_str()) { return Err("Backup contains an invalid or duplicate chat ID".into()); }
         if chat.title.trim().is_empty() || chat.title.chars().count() > 200 { return Err("Backup contains an invalid chat title".into()); }
-        if chat.created_at.len() > 64 || chat.updated_at.len() > 64 { return Err("Backup contains an invalid timestamp".into()); }
+        if chrono::DateTime::parse_from_rfc3339(&chat.created_at).is_err() || chrono::DateTime::parse_from_rfc3339(&chat.updated_at).is_err() { return Err("Backup contains an invalid chat timestamp".into()); }
         total_messages += chat.messages.len();
         if total_messages > MAX_MESSAGES { return Err("Backup contains too many messages".into()); }
         let mut positions = std::collections::HashSet::new();
         for message in &chat.messages {
             if message.id.is_empty() || message.id.len() > 128 || !message_ids.insert(message.id.as_str()) { return Err("Backup contains an invalid or duplicate message ID".into()); }
             if message.body.trim().is_empty() || message.body.len() > MAX_MESSAGE_BYTES { return Err("Backup contains an invalid or oversized message".into()); }
-            if message.created_at.len() > 64 || !positions.insert(message.position) { return Err("Backup contains invalid message ordering or timestamp".into()); }
+            if chrono::DateTime::parse_from_rfc3339(&message.created_at).is_err() || !positions.insert(message.position) { return Err("Backup contains invalid message ordering or timestamp".into()); }
             if message.diagnostics.is_some() && !matches!(message.role, MessageRole::Assistant) { return Err("Only assistant messages may contain diagnostics".into()); }
             let _ = serialize_diagnostics(message.diagnostics.as_ref())?;
         }
