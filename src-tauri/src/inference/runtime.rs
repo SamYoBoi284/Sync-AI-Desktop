@@ -344,7 +344,6 @@ mod tests {
             fits_current_availability: false,
             estimate_kind: "test".into(),
         };
-        assert!(validate_preflight(&estimate).unwrap_err().contains("currently available RAM"));
+        assert!(validate_preflight(&estimate).unwrap_err().contains("current available RAM"));
     }
-}
 }
