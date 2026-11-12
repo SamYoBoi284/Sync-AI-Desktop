@@ -28,7 +28,7 @@ Foreign keys on artifact source references use `ON DELETE SET NULL`. Deleting a 
 
 ## Workspace behavior
 
-Artifacts support the kinds `document`, `code`, `snippet`, `report` and `other`. The editor supports create, update, search and delete. Chat assistant messages expose a user-invoked “Save to Workspace” action; the user supplies the artifact title. Newly saved chat replies default to **not included** in future context.
+Artifacts support the kinds `document`, `code`, `snippet`, `report` and `other`. The editor supports create, update, search and delete. List views load lightweight summaries; full artifact bodies are fetched only when an artifact is opened. Chat assistant messages expose a user-invoked “Save to Workspace” action; the user supplies the artifact title. Newly saved chat replies default to **not included** in future context.
 
 Validation:
 - Artifact title: 1–200 characters.
@@ -44,7 +44,7 @@ Tasks support:
 - Optional due date in `YYYY-MM-DD` form.
 - Title maximum 200 characters; details maximum 128 KiB.
 
-Notes support a title (maximum 200 characters), up to 2 MiB of content, pinning and a separate `include_in_context` flag. Pinning affects ordering; it does not automatically grant context access.
+Notes support a title (maximum 200 characters), up to 2 MiB of content, pinning and a separate `include_in_context` flag. The list view loads note summaries; full note content is fetched only when selected. Pinning affects ordering; it does not automatically grant context access.
 
 Tasks are not currently supplied to the language model. Notes are supplied only when their context flag is enabled.
 
@@ -79,7 +79,7 @@ The frontend uses typed wrappers for the following command groups:
 
 - Workspace: `list_workspace_artifacts`, `get_workspace_artifact`, `create_workspace_artifact`, `update_workspace_artifact`, `delete_workspace_artifact`, `list_workspace_context`.
 - Tasks: `list_tasks`, `create_task`, `update_task`, `delete_task`.
-- Notes: `list_notes`, `create_note`, `update_note`, `delete_note`.
+- Notes: `list_notes`, `get_note`, `create_note`, `update_note`, `delete_note`.
 - File Library: `import_library_file`, `list_library_files`, `relink_library_file`, `remove_library_file`.
 
 The webview does not submit arbitrary paths to File Library commands. File selection and canonicalization occur on the native side.
