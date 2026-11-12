@@ -67,7 +67,7 @@ The registry stores:
 - SHA-256 fingerprint.
 - Registration timestamp.
 
-Re-importing identical bytes updates/relinks the matching record. Relinking a missing entry verifies the selected file and its hash. Removing an entry deletes only the SQLite registry record. It never moves, copies or deletes the user's original file.
+Re-importing identical bytes updates/relinks the matching record. Relinking a missing entry requires the selected file's SHA-256 to match the stored fingerprint; a different file is rejected. To intentionally track changed content, remove the old registry entry and add the new file. Removing an entry deletes only the SQLite registry record. It never moves, copies or deletes the user's original file.
 
 **The File Library is currently a path-and-fingerprint index.** It does not parse or attach file contents to a chat, does not grant the model access to the path, and does not expose a generic filesystem API. Any future AI-requested file read or write must be implemented in Phase 6 behind an exact-scope, one-time approval and independent Rust validation.
 
