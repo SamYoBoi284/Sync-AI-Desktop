@@ -548,11 +548,9 @@ This document is based on source inspection and official Tauri documentation. It
 
 - Android reference files inspected: see Section 2.
 - Tauri 2 + React/TypeScript compatibility: checked against Tauri's current frontend prerequisites model.
-- Desktop application build: not run; no scaffold exists.
-- Rust tests: not run; no Rust application code exists.
-- Frontend tests: not run; no frontend application code exists.
-- Native Windows inference: not built or tested.
-- Security approval flow: designed, not implemented or audited.
+- At the time this initial port specification was drafted, the desktop application scaffold and native code had not yet been created.
+- This section is a historical baseline, not the current repository status. Current Phase 0–5 source status and validation limits are recorded in the README, CONTEXT_TRACKER.md and Phase 5 update at the end of this document.
+- Native Windows inference, full Tauri runtime and security approval flow still require implementation-specific validation; Phase 6 approval tooling remains planned.
 
 ## Desktop-specific Phase 4 correction
 
