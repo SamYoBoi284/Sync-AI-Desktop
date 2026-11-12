@@ -14,8 +14,8 @@
 
 ## 2. Current status
 
-**Phase:** 3 — local data foundation (scope approved; implementation not started)  
-**Status:** Phase 2.1 desktop shell source is committed. Phase 3 is specified to add SQLite-backed chat/message persistence, diagnostics attached to each assistant message, functional chat history, and a versioned desktop-native chat backup/restore format. Android backup import/export compatibility has been removed from scope. No Phase 3 storage or UI implementation is committed yet.
+**Phase:** 3 — local data foundation (source implementation in progress; validation pending)  
+**Status:** SQLite schema/migration v1, Rust chat/message/settings commands, per-assistant-message diagnostics persistence, versioned desktop backup validation/import/export, and a connected History UI are committed to main. Android backup compatibility is out of scope. No frontend build, Cargo test/check or Windows runtime test has been run.
 
 ### Verified in this repository
 
@@ -42,9 +42,9 @@
 - Windows runtime verification of first-start splash, same-process reload behavior, tray restore, close-to-tray, second-launch focus and Exit
 - Tauri development launch on Windows
 - Cargo check/build on Windows
-- SQLite schema or migrations
-- Chat generation, message persistence, per-message diagnostics persistence/display, desktop-native backup import/export
-- Functional chat history CRUD/search
+- Local SQLite runtime/build validation and end-to-end Tauri IPC tests
+- Chat generation, streaming, queueing and cancellation
+- End-to-end backup file dialog/download testing on Windows
 - GGUF model manager
 - llama.cpp Windows build/integration
 - Workspace, File Library, Tasks & Notes or voice
@@ -85,7 +85,7 @@
 | Frontend build tool | Vite | Selected |
 | Package manager | npm | Selected |
 | Inference | llama.cpp + GGUF | Agreed direction |
-| Persistence | SQLite | Proposed; schema not designed yet |
+| Persistence | SQLite | Schema v1 and storage source committed; build/runtime validation pending |
 | Config | Local structured settings | Implementation choice open |
 | Platform | Windows x64 first | Agreed |
 
@@ -254,12 +254,11 @@ Do not implement computer-control tools before the approval model and its tests 
 
 ## 13. Exact next step
 
-Begin Phase 3 from docs/PHASE3_DATA_CONTRACT.md:
-1. Add the SQLite dependency and versioned migration runner in Rust.
-2. Implement chat/message CRUD with diagnostics stored on the corresponding assistant message.
-3. Implement transactional desktop-native backup export/import with validation, version checks and duplicate handling.
-4. Connect the History UI to storage commands and add per-message diagnostics disclosure.
-5. Add Rust and frontend tests; record actual results without claiming Windows validation until run on the personal Windows machine.
+Continue Phase 3 validation and hardening:
+1. Run npm install and npm run build on the personal Windows development machine.
+2. Run cargo test and cargo check from src-tauri.
+3. Launch with npm run tauri dev and verify database creation, History CRUD/search, diagnostics display, backup export/import and duplicate handling.
+4. Fix compile/runtime issues found by those checks before moving to Phase 4.
 3. Add theme and appearance controls.
 4. Once the inference interface exists, connect chat generation to the Rust runtime.
 5. Run TypeScript, Rust and Windows lifecycle validation on the user's personal Windows development machine. Do not use the work PC.
