@@ -7,6 +7,9 @@ import { RuntimePage } from "./pages/RuntimePage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { LocalModelsPage } from "./pages/LocalModelsPage";
+import { WorkspacePage } from "./pages/WorkspacePage";
+import { TasksNotesPage } from "./pages/TasksNotesPage";
+import { FileLibraryPage } from "./pages/FileLibraryPage";
 import { getAppInfo, type AppInfo } from "./services/nativeBridge";
 import type { PageId } from "./types/navigation";
 import { LoadingScreen } from "./components/startup/LoadingScreen";
@@ -84,6 +87,12 @@ function App({ showStartupSplash }: AppProps) {
               <SettingsPage onNavigate={navigateToPage} />
             ) : activePage === "models" ? (
               <LocalModelsPage />
+            ) : activePage === "workspace" ? (
+              <WorkspacePage />
+            ) : activePage === "tasks" ? (
+              <TasksNotesPage />
+            ) : activePage === "library" ? (
+              <FileLibraryPage />
             ) : activePage === "runtime" ? (
               <RuntimePage bridgeKind={bridgeKind} info={appInfo} />
             ) : (
