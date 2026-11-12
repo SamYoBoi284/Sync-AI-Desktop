@@ -29,7 +29,7 @@
 - The frontend distinguishes the native bridge from browser preview.
 - Sidebar navigation and SQLite-backed recent chats are source-implemented. History and Local Models have functional source interfaces; remaining unimplemented destinations are clearly labelled previews.
 - Phase 4 Stage 1 source adds a GGUF registry, native file-picker import, SHA-256 verification/deduplication, managed model storage, default selection/removal and host RAM detection.
-- Settings contains an optional RAM Limiter toggle and budget slider persisted through SQLite. It is off by default; Stage 2 checks the estimated inference footprint against this budget before model loading and checks the native context estimate again before allocating the session. This is not an OS-enforced hard process cap.
+- Settings contains an optional RAM Limiter toggle and budget slider persisted through SQLite. It is off by default; Stage 2 checks the estimated inference footprint against this budget before model loading and checks the native context estimate again before allocating the session. This is not an OS-enforced hard process cap. The current-available-RAM and system-reserve check always runs, even when the optional configured budget is disabled.
 - Rust registers the Tauri single-instance plugin first and restores/focuses the existing main window on subsequent process launches.
 - Rust owns an atomic startup-splash gate consumed once per process.
 - A native tray menu provides Open, Hide and Exit; left-click restores where supported.
@@ -47,7 +47,6 @@
 - Tauri development launch on Windows
 - Cargo check/build on Windows
 - Local SQLite runtime/build validation and end-to-end Tauri IPC tests
-- Chat generation, streaming, queueing and cancellation
 - End-to-end backup file dialog/download testing on Windows
 - Actual Windows compilation/linking of llama_cpp/llama.cpp and C++ dependencies
 - Runtime verification with real GGUF files, model load/unload, memory refusal and repeated lifecycle

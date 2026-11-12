@@ -26,13 +26,12 @@ The sidebar now includes searchable recent conversations sourced from SQLite His
 
 The New chat composer remains intentionally disabled until local inference is connected. Chat storage and History source are implemented in Phase 3; Windows runtime validation remains pending.
 
-**Phase 4 Stage 2 details:** The Rust GGUF header reader extracts model architecture, name, quantization and memory dimensions. The pinned llama_cpp 0.3.2 wrapper builds llama.cpp from source; the first runtime is CPU-only, loads only on explicit user action, and creates a bounded 2,048-token context session. Model load/unload status, memory estimates, RAM-budget refusal and currently-available-RAM checks are connected in source. The limiter is still an application-level guard, not a hard OS process cap. No native build or Windows runtime validation has been performed.
+**Phase 4 Stage 2 details:** The Rust GGUF header reader extracts model architecture, name, quantization and memory dimensions. The pinned llama_cpp 0.3.2 wrapper builds llama.cpp from source; the first runtime is CPU-only, loads only on explicit user action, and creates a bounded 2,048-token context session. Model load/unload status, memory estimates, RAM-budget refusal and currently-available-RAM checks are connected in source. The optional configured budget is an application-level guard, not a hard OS process cap; the available-RAM/safety-reserve check remains active even when the optional budget is off. No native build or Windows runtime validation has been performed.
 
 **Phase 3 implementation source is committed.** The repository now contains the SQLite storage layer, typed Rust commands, per-message diagnostics data model, desktop backup validation/round-trip tests, and a connected History UI with search, rename, delete, import and export source. These changes have not been built or runtime-tested yet. Android backup compatibility is explicitly out of scope.
 
 Not implemented yet:
 - Appearance and broader preference controls (the RAM Limiter is implemented in source; theme/accent/motion controls remain planned)
-- Chat generation, streaming, queueing and cancellation
 - Windows build/runtime validation of the new SQLite and History implementation
 - Chat generation, token streaming, queueing and cancellation (the native model/context lifecycle is Stage 2; chat generation is Stage 3)
 - Workspace storage

@@ -97,6 +97,24 @@ fn find_model(db: &Database, model_id: &str) -> Result<ModelRecord, String> {
         .ok_or_else(|| "Model was not found in the local registry.".into())
 }
 
+pub(crate) fn managed_models_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let app_dir = app.path().app_data_dir()
+        .map_err(|e| format!("Cannot resolve Sync data directory: {e}"))?;
+    std::fs::create_dir_all(&app_dir)
+        .map_err(|e| format!("Cannot prepare Sync data directory: {e}"))?;
+    let canonical_app_dir = app_dir.canonicalize()
+        .map_err(|e| format!("Cannot resolve canonical Sync data directory: {e}"))?;
+    let model_dir = canonical_app_dir.join("models");
+    std::fs::create_dir_all(&model_dir)
+        .map_err(|e| format!("Cannot prepare managed model directory: {e}"))?;
+    let canonical_model_dir = model_dir.canonicalize()
+        .map_err(|e| format!("Managed model directory is unavailable: {e}"))?;
+    if canonical_model_dir.parent() != Some(canonical_app_dir.as_path()) {
+        return Err("Managed model directory resolves outside Sync's application data directory.".into());
+    }
+    Ok(canonical_model_dir)
+}
+
 pub(crate) fn managed_model_path(
     app: &AppHandle,
     db: &Database,
@@ -110,12 +128,8 @@ pub(crate) fn managed_model_path(
         return Err("Stored model path failed the managed-directory safety check.".into());
     }
 
-    let app_dir = app.path().app_data_dir()
-        .map_err(|e| format!("Cannot resolve Sync data directory: {e}"))?;
-    let model_dir = app_dir.join("models");
-    let canonical_dir = model_dir.canonicalize()
-        .map_err(|e| format!("Managed model directory is unavailable: {e}"))?;
-    let target = model_dir.join(relative_path).canonicalize()
+    let canonical_dir = managed_models_dir(app)?;
+    let target = canonical_dir.join(relative_path).canonicalize()
         .map_err(|e| format!("Managed model file is unavailable: {e}"))?;
     if target.parent() != Some(canonical_dir.as_path()) || !target.is_file() {
         return Err("Stored model path escaped the managed model directory or is not a regular file.".into());

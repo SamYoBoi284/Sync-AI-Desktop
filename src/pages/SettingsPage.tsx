@@ -19,7 +19,7 @@ export function SettingsPage({onNavigate}:{onNavigate:(page:PageId)=>void}) {
   </div>
   <section className="shell-settings-panel">
    <div className="shell-panel-heading"><div><p className="shell-section-kicker">RESOURCE MANAGEMENT</p><h2>RAM Limiter</h2></div><span className="shell-panel-tag">OPTIONAL · OFF BY DEFAULT</span></div>
-   <p className="shell-settings-intro">Sync detects your machine’s RAM automatically. Enable the limiter to set a managed memory budget for local inference.</p>
+   <p className="shell-settings-intro">Sync detects your machine’s RAM automatically. When enabled, the budget blocks oversized model loads. Sync always checks currently available RAM and keeps a system reserve, even when the optional budget is off.</p>
    {loading?<p className="shell-settings-footnote">Detecting system memory…</p>:ram?<>
     <div className="shell-ram-stats"><div><small>INSTALLED RAM</small><strong>{toGb(ram.totalBytes).toFixed(1)} GB</strong></div><div><small>CURRENTLY AVAILABLE</small><strong>{toGb(ram.availableBytes).toFixed(1)} GB</strong></div><div><small>MAX INFERENCE BUDGET</small><strong>{maxGb} GB</strong></div></div>
     <label className="shell-ram-toggle"><span><strong>Enable RAM Limiter</strong><small>Block a model load when its estimated inference memory exceeds this budget.</small></span><input type="checkbox" checked={config.enabled} disabled={saving} onChange={e=>void persist({...config,enabled:e.target.checked})}/></label>
@@ -27,7 +27,7 @@ export function SettingsPage({onNavigate}:{onNavigate:(page:PageId)=>void}) {
    </>:<p className="shell-settings-footnote">RAM detection requires the native desktop host.</p>}
    {message&&<p className="shell-settings-feedback" role="status">{message}</p>}
   </section>
-  <div className="shell-settings-grid shell-settings-secondary"><div className="shell-settings-card is-staged"><span className="shell-settings-card-icon">◈</span><span><strong>Model and memory</strong><small>GGUF registry and model lifecycle are being added in Phase 4.</small></span><span className="shell-settings-card-state">IN PROGRESS</span></div><div className="shell-settings-card is-staged"><span className="shell-settings-card-icon">⌑</span><span><strong>Privacy and permissions</strong><small>Explicit approval controls arrive with the secure tool system.</small></span><span className="shell-settings-card-state">PLANNED</span></div></div>
+  <div className="shell-settings-grid shell-settings-secondary"><button className="shell-settings-card" type="button" onClick={()=>onNavigate("models")}><span className="shell-settings-card-icon">◈</span><span><strong>Local models</strong><small>GGUF metadata, CPU load/unload, and model memory preflight checks.</small></span><span className="shell-settings-card-arrow">›</span></button><div className="shell-settings-card is-staged"><span className="shell-settings-card-icon">⌑</span><span><strong>Privacy and permissions</strong><small>Explicit approval controls arrive with the secure tool system.</small></span><span className="shell-settings-card-state">PLANNED</span></div></div>
   <p className="shell-settings-footnote">The selected budget is saved in local SQLite and checked when a model is loaded. Lowering the budget does not retroactively unload an active model.</p>
  </section>;
 }

@@ -7,11 +7,11 @@ use std::{
 use chrono::{SecondsFormat, Utc};
 use sha2::{Digest, Sha256};
 use sysinfo::System;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, State};
 use uuid::Uuid;
 
 use crate::{
-    commands::runtime::{managed_model_path, model_is_in_use},
+    commands::runtime::{managed_model_path, managed_models_dir, model_is_in_use},
     inference::{gguf::GgufMetadata, runtime::RuntimeManager},
     storage::{models::ModelRecord, Database},
 };
@@ -102,11 +102,7 @@ pub fn import_gguf(
         return Ok(Some(ModelImportResult { model: existing, duplicate: true }));
     }
 
-    let app_dir = app.path().app_data_dir()
-        .map_err(|e| format!("Cannot resolve Sync data directory: {e}"))?;
-    let model_dir = app_dir.join("models");
-    fs::create_dir_all(&model_dir)
-        .map_err(|e| format!("Cannot create model directory: {e}"))?;
+    let model_dir = managed_models_dir(&app)?;
 
     let id = Uuid::new_v4().to_string();
     let safe_name: String = source_name.chars().map(|c| {
