@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Frontend builds
+dist/
+build/
+
+# Rust / Tauri
+target/
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local model files (never commit model weights)
+*.gguf
+*.ggml
+models/
+model-cache/
+
+# Local databases and runtime state
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
