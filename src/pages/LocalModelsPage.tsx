@@ -67,6 +67,14 @@ export function LocalModelsPage() {
 
   const load = async (id: string) => {
     setBusyModel(id); setError(""); setNotice("");
+    setRuntime((current) => current ? {
+      ...current, isLoading: true, loadingModelId: id,
+    } : {
+      isLoading: true, isLoaded: false, loadingModelId: id,
+      loadedModelId: null, loadedModelName: null, loadedAt: null,
+      estimatedMemoryBytes: null, contextLength: null, batchSize: null,
+      backend: "llama.cpp · CPU",
+    });
     try {
       const next = await loadModel(id);
       setRuntime(next);
