@@ -12,7 +12,7 @@ This repository is intentionally separate from [Sync-AI](https://github.com/SamY
 - **Frontend build tool:** Vite
 - **Package manager:** npm
 - **Local inference:** llama.cpp with GGUF models (not integrated yet)
-- **Persistence:** SQLite (planned; schema not yet implemented)
+- **Persistence:** SQLite (schema v1 and storage source implemented; runtime validation pending)
 - **Initial platform:** Windows x64
 - **Operating principle:** offline-first; no cloud service required for core chat or inference
 
