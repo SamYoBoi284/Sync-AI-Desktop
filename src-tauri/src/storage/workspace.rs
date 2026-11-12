@@ -387,6 +387,16 @@ impl Database {
 
     pub fn relink_library_file(&self, id: &str, record: LibraryFileRecord) -> Result<LibraryFileRecord, String> {
         let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
+        let existing_hash: Option<String> = connection.query_row(
+            "SELECT sha256 FROM library_files WHERE id = ?1",
+            [id], |row| row.get(0)
+        ).optional().map_err(db_error)?;
+        let Some(existing_hash) = existing_hash else {
+            return Err("File Library entry not found".into());
+        };
+        if existing_hash != record.sha256 {
+            return Err("The selected file does not match the original SHA-256 fingerprint. Relinking requires the same file contents.".into());
+        }
         let duplicate_id: Option<String> = connection.query_row(
             "SELECT id FROM library_files WHERE sha256 = ?1 AND id <> ?2",
             params![record.sha256, id], |row| row.get(0)
@@ -395,8 +405,8 @@ impl Database {
             return Err("Another File Library entry already tracks these exact bytes.".into());
         }
         let changed = connection.execute(
-            "UPDATE library_files SET file_name = ?1, extension = ?2, source_path = ?3, size_bytes = ?4, sha256 = ?5, added_at = ?6 WHERE id = ?7",
-            params![record.file_name, record.extension, record.source_path, record.size_bytes as i64, record.sha256, now(), id],
+            "UPDATE library_files SET file_name = ?1, extension = ?2, source_path = ?3, size_bytes = ?4, added_at = ?5 WHERE id = ?6",
+            params![record.file_name, record.extension, record.source_path, record.size_bytes as i64, now(), id],
         ).map_err(db_error)?;
         if changed == 0 { return Err("File Library entry not found".into()); }
         load_library_file(&connection, id)?.ok_or_else(|| "Relinked file could not be loaded".into())
