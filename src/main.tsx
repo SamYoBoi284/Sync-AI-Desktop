@@ -6,6 +6,9 @@ import { consumeStartupSplash } from "./services/nativeBridge";
 import "./styles.css";
 import "./shell.css";
 import "./history.css";
+import "./workspace.css";
+import "./tasks-notes.css";
+import "./library.css";
 
 const rootElement = document.getElementById("root");
 
@@ -34,7 +37,3 @@ async function bootstrap() {
 }
 
 void bootstrap();
-
-import "./workspace.css";
-import "./tasks-notes.css";
-import "./library.css";
