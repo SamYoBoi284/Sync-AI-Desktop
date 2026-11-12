@@ -14,8 +14,8 @@
 
 ## 2. Current status
 
-**Phase:** 2 — desktop shell and navigation  
-**Status:** Phase 2 now includes the startup/tray lifecycle and a navigable React desktop shell. Sidebar destinations switch between the chat landing screen, history, workspace, tasks/notes, file library, local models, appearance and runtime pages. These are source-implemented but not built or run on Windows. Chat generation, storage, model management and computer-control features remain unimplemented.
+**Phase:** 3 — local data foundation (scope approved; implementation not started)  
+**Status:** Phase 2.1 desktop shell source is committed. Phase 3 is specified to add SQLite-backed chat/message persistence, diagnostics attached to each assistant message, functional chat history, and a versioned desktop-native chat backup/restore format. Android backup import/export compatibility has been removed from scope. No Phase 3 storage or UI implementation is committed yet.
 
 ### Verified in this repository
 
@@ -43,7 +43,8 @@
 - Tauri development launch on Windows
 - Cargo check/build on Windows
 - SQLite schema or migrations
-- Chat generation, message persistence or Android backup import/export
+- Chat generation, message persistence, per-message diagnostics persistence/display, desktop-native backup import/export
+- Functional chat history CRUD/search
 - GGUF model manager
 - llama.cpp Windows build/integration
 - Workspace, File Library, Tasks & Notes or voice
@@ -142,7 +143,7 @@ Authoritative source map and implementation notes: docs/ANDROID_TO_DESKTOP_SPEC.
 Key desktop decisions:
 - Persistent left navigation; adapt Android slide drawer to desktop shell.
 - Main chat: Sync Core/header, model status, message list, diagnostics, multiline composer, send/stop state.
-- Preserve conversation queue, streaming, cancellation and Android backup compatibility.
+- Preserve conversation queue, streaming and cancellation; use a desktop-native, versioned chat backup format. Android backup compatibility is not required.
 - Preserve six themes, light/dark/system mode, eight independent accents and motion settings.
 - GGUF-only loadable model manager for MVP; import/hash/deduplicate/metadata lifecycle.
 - Build llama.cpp for Windows behind an opaque-handle C ABI or safe Rust FFI. Exact mechanism requires a proof-of-concept spike.
@@ -208,7 +209,7 @@ Tauri capabilities are an additional boundary, not a replacement for per-operati
 1. Phase 0 — Repository foundation and source-to-desktop spec. Complete.
 2. Phase 1 — Tauri 2 + React + TypeScript + Vite scaffold and minimal metadata IPC command. Source committed; builds not yet verified.
 3. Phase 2 — Desktop shell, startup/tray lifecycle, sidebar, chat UI, Sync Core, themes and settings. Startup/tray lifecycle and navigable shell source are implemented; chat services and Windows validation are pending.
-4. Phase 3 — SQLite schema/migrations, chat CRUD, Android backup import/export.
+4. Phase 3 — SQLite schema/migrations, chat/message CRUD, per-assistant-message diagnostics, History CRUD/search, and versioned desktop-native chat backup import/export.
 5. Phase 4 — GGUF manager and minimal Windows llama.cpp FFI proof of concept.
 6. Phase 5 — Streamed local inference, Workspace, File Library, Tasks & Notes and resource metrics.
 7. Phase 6 — Tool registry, one-time approval broker, Windows validation and security test suite.
@@ -253,9 +254,12 @@ Do not implement computer-control tools before the approval model and its tests 
 
 ## 13. Exact next step
 
-Continue Phase 2 on the desktop shell:
-1. Build the chat interaction components and define message, composer, queue and stop-state contracts without fabricating model output.
-2. Implement the Sync Core state component and its eight visual states with reduced-motion support.
+Begin Phase 3 from docs/PHASE3_DATA_CONTRACT.md:
+1. Add the SQLite dependency and versioned migration runner in Rust.
+2. Implement chat/message CRUD with diagnostics stored on the corresponding assistant message.
+3. Implement transactional desktop-native backup export/import with validation, version checks and duplicate handling.
+4. Connect the History UI to storage commands and add per-message diagnostics disclosure.
+5. Add Rust and frontend tests; record actual results without claiming Windows validation until run on the personal Windows machine.
 3. Add theme and appearance controls.
 4. Once the inference interface exists, connect chat generation to the Rust runtime.
 5. Run TypeScript, Rust and Windows lifecycle validation on the user's personal Windows development machine. Do not use the work PC.
