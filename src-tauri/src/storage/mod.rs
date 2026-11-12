@@ -1,4 +1,5 @@
 pub mod models;
+pub mod workspace;
 
 use std::path::Path;
 use std::sync::Mutex;
@@ -359,7 +360,7 @@ fn migrate(connection: &Connection) -> Result<(), String> {
         "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);"
     ).map_err(db_error)?;
     let mut version: u32 = connection.query_row("SELECT COALESCE(MAX(version), 0) FROM schema_migrations", [], |r| r.get(0)).map_err(db_error)?;
-    if version > 3 { return Err("Database schema is newer than this application version".into()); }
+    if version > 4 { return Err("Database schema is newer than this application version".into()); }
     if version < 1 {
         let tx = connection.unchecked_transaction().map_err(db_error)?;
         tx.execute_batch(
@@ -410,6 +411,56 @@ fn migrate(connection: &Connection) -> Result<(), String> {
         tx.execute_batch("ALTER TABLE models ADD COLUMN source_path TEXT NULL;")
             .map_err(db_error)?;
         tx.execute("INSERT INTO schema_migrations (version, applied_at) VALUES (3, ?1)", [now()]).map_err(db_error)?;
+        tx.commit().map_err(db_error)?;
+    }
+    if version < 4 {
+        let tx = connection.unchecked_transaction().map_err(db_error)?;
+        tx.execute_batch(
+            "CREATE TABLE workspace_artifacts (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                kind TEXT NOT NULL CHECK(kind IN ('document', 'code', 'snippet', 'report', 'other')),
+                content TEXT NOT NULL,
+                source_chat_id TEXT NULL REFERENCES chats(id) ON DELETE SET NULL,
+                source_message_id TEXT NULL REFERENCES messages(id) ON DELETE SET NULL,
+                include_in_context INTEGER NOT NULL DEFAULT 0 CHECK(include_in_context IN (0, 1)),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+             );
+             CREATE INDEX idx_workspace_artifacts_updated ON workspace_artifacts(updated_at DESC);
+             CREATE TABLE tasks (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                details TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL CHECK(status IN ('todo', 'in-progress', 'done')),
+                priority TEXT NOT NULL CHECK(priority IN ('low', 'normal', 'high')),
+                due_date TEXT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+             );
+             CREATE INDEX idx_tasks_status_due ON tasks(status, due_date);
+             CREATE TABLE notes (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL DEFAULT '',
+                pinned INTEGER NOT NULL DEFAULT 0 CHECK(pinned IN (0, 1)),
+                include_in_context INTEGER NOT NULL DEFAULT 0 CHECK(include_in_context IN (0, 1)),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+             );
+             CREATE INDEX idx_notes_pinned_updated ON notes(pinned DESC, updated_at DESC);
+             CREATE TABLE library_files (
+                id TEXT PRIMARY KEY,
+                file_name TEXT NOT NULL,
+                extension TEXT NULL,
+                source_path TEXT NOT NULL UNIQUE,
+                size_bytes INTEGER NOT NULL CHECK(size_bytes > 0),
+                sha256 TEXT NOT NULL UNIQUE,
+                added_at TEXT NOT NULL
+             );
+             CREATE INDEX idx_library_files_added ON library_files(added_at DESC);"
+        ).map_err(db_error)?;
+        tx.execute("INSERT INTO schema_migrations (version, applied_at) VALUES (4, ?1)", [now()]).map_err(db_error)?;
         tx.commit().map_err(db_error)?;
     }
     Ok(())
@@ -507,7 +558,7 @@ mod tests {
         let db = memory_db();
         let connection = db.connection.lock().unwrap();
         let count: u32 = connection.query_row("SELECT COUNT(*) FROM schema_migrations", [], |r| r.get(0)).unwrap();
-        assert_eq!(count, 3);
+        assert_eq!(count, 4);
         let model_table: bool = connection.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'models')", [], |r| r.get(0)).unwrap();
         assert!(model_table);
     }
