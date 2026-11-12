@@ -90,9 +90,9 @@ Planned SQLite data:
 
 Use schema migrations, foreign keys and transactions for multi-row changes. Keep GGUF model files external to the repository. Keep user data, local databases, prompts, model contents and secrets out of Git.
 
-Android chat export format version 1 must remain importable. Import must validate before committing, enforce bounds, skip duplicate IDs and never mutate the backup source.
+Chat backups use a desktop-native, versioned format named sync-ai-desktop-backup. Android backup compatibility is intentionally out of scope. Import validates the complete backup before committing, enforces bounds, skips conflicting chat IDs rather than overwriting local data, and never mutates the source file. Export/import preserves diagnostics attached to assistant messages.
 
-The full schema, migration strategy and backup evolution rules are still open.
+The schema and backup contract are specified in docs/PHASE3_DATA_CONTRACT.md; implementation remains pending.
 
 ## 7. Tool registry and approval broker
 
