@@ -64,6 +64,7 @@ From the repository root:
 ~~~powershell
 npm install
 npm run build
+cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
 cargo check --manifest-path src-tauri/Cargo.toml
 cargo test --manifest-path src-tauri/Cargo.toml
 npm run tauri dev
