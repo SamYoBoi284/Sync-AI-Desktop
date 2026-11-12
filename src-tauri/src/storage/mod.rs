@@ -21,7 +21,35 @@ const MAX_MESSAGE_BYTES: usize = 1_000_000;
 const MAX_DIAGNOSTICS_BYTES: usize = 64 * 1024;
 
 pub struct Database {
-    connection: Mutex<Connection>,
+    connection: Mutex<Connection>, 
+    #[test]
+    fn diagnostics_are_rejected_on_user_messages() {
+        let db = memory_db();
+        let chat = db.create_chat(None).unwrap();
+        let diagnostics = MessageDiagnostics {
+            generation_id: None, model_id: None, model_label: None, backend: None, backend_version: None,
+            status: None, prompt_tokens: None, generated_tokens: None, prompt_eval_ms: None,
+            generation_ms: None, tokens_per_second: None, context_size: None, max_context_size: None,
+            temperature: None, stop_reason: None, error_code: None, error_message: None,
+            started_at: None, finished_at: None,
+        };
+        let result = db.append_message(&chat.id, NewMessage {
+            role: MessageRole::User, body: "hello".into(), diagnostics: Some(diagnostics),
+        });
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn duplicate_chat_ids_inside_backup_are_rejected() {
+        let db = memory_db();
+        let chat = db.create_chat(None).unwrap();
+        let mut backup = db.export_backup().unwrap();
+        backup.chats.push(backup.chats[0].clone());
+        assert!(db.import_backup(backup).is_err());
+        assert_eq!(db.list_chats(None, None, None).unwrap().len(), 1);
+        assert_eq!(chat.title, "New conversation");
+    }
+
 }
 
 impl Database {
@@ -98,7 +126,7 @@ impl Database {
         let diagnostics_json = serialize_diagnostics(message.diagnostics.as_ref())?;
         let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
         let tx = connection.unchecked_transaction().map_err(db_error)?;
-        let position: u64 = tx.query_row("SELECT COALESCE(MAX(position) + 1, 0) FROM messages WHERE chat_id = ?1", [chat_id], |row| row.get(0)).map_err(db_error)?;
+        let position: i64 = tx.query_row("SELECT COALESCE(MAX(position) + 1, 0) FROM messages WHERE chat_id = ?1", [chat_id], |row| row.get(0)).map_err(db_error)?;
         tx.execute("INSERT INTO messages (id, chat_id, role, body, created_at, position, diagnostics_json) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![id, chat_id, message.role.as_str(), message.body, created_at, position, diagnostics_json]).map_err(db_error)?;
         tx.execute("UPDATE chats SET updated_at = ?1 WHERE id = ?2", params![now(), chat_id]).map_err(db_error)?;
@@ -234,6 +262,7 @@ fn load_chat(connection: &Connection, chat_id: &str) -> Result<Option<ChatDetail
     let mut messages = Vec::new();
     for row in rows {
         let (message_id, role, body, created, position, diagnostics) = row.map_err(db_error)?;
+        if position < 0 { return Err("Stored message position is invalid".into()); }
         let role = parse_role(&role)?;
         let diagnostics = diagnostics.map(|v| serde_json::from_str::<MessageDiagnostics>(&v).map_err(|e| e.to_string())).transpose()?;
         messages.push(ChatMessage { id: message_id, chat_id: id.clone(), role, body, created_at: created, position, diagnostics });
@@ -279,7 +308,7 @@ fn validate_backup(backup: &BackupDocument) -> Result<(), String> {
         for message in &chat.messages {
             if message.id.is_empty() || message.id.len() > 128 || !message_ids.insert(message.id.as_str()) { return Err("Backup contains an invalid or duplicate message ID".into()); }
             if message.body.trim().is_empty() || message.body.len() > MAX_MESSAGE_BYTES { return Err("Backup contains an invalid or oversized message".into()); }
-            if chrono::DateTime::parse_from_rfc3339(&message.created_at).is_err() || !positions.insert(message.position) { return Err("Backup contains invalid message ordering or timestamp".into()); }
+            if chrono::DateTime::parse_from_rfc3339(&message.created_at).is_err() || message.position < 0 || !positions.insert(message.position) { return Err("Backup contains invalid message ordering or timestamp".into()); }
             if message.diagnostics.is_some() && !matches!(message.role, MessageRole::Assistant) { return Err("Only assistant messages may contain diagnostics".into()); }
             let _ = serialize_diagnostics(message.diagnostics.as_ref())?;
         }
