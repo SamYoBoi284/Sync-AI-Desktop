@@ -253,7 +253,13 @@ Do not implement computer-control tools before the approval model and its tests 
 
 ## 13. Exact next step
 
-On the personal Windows development machine only, verify Node.js 22.12+ (or 20.19+), Rust stable MSVC 1.90+, Microsoft C++ Build Tools with Desktop development with C++, and WebView2. Run `npm install`, `npm run build`, `cargo check` from `src-tauri`, then `npm run tauri dev`. Test: first launch shows the splash once; tray restore does not; closing hides to tray; tray Open restores; a second executable launch focuses the existing process; tray Exit terminates it. Do not use the work PC or add filesystem/shell access as a shortcut.
+Continue Phase 2 on the desktop shell:
+1. Build the chat interaction components and define message, composer, queue and stop-state contracts without fabricating model output.
+2. Implement the Sync Core state component and its eight visual states with reduced-motion support.
+3. Add theme and appearance controls.
+4. Once the inference interface exists, connect chat generation to the Rust runtime.
+5. Run TypeScript, Rust and Windows lifecycle validation on the user's personal Windows development machine. Do not use the work PC.
+
 
 
 ## 14. Phase 2 startup lifecycle slice — 2026-11-12

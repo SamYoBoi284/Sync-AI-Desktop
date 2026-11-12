@@ -12,7 +12,6 @@ export type PageId =
 
 type IconName =
   | "plus"
-  | "message"
   | "clock"
   | "layers"
   | "check"
@@ -58,7 +57,6 @@ const navigationSections: NavigationSection[] = [
 
 const iconArtwork: Record<IconName, ReactNode> = {
   plus: <path d="M12 5v14M5 12h14" />,
-  message: <path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l1.7-3.4A7.5 7.5 0 1 1 20 11.5Z" />,
   clock: <><circle cx="12" cy="12" r="8.5" /><path d="M12 7v5l3 2" /></>,
   layers: <><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5M3 16l9 5 9-5" /></>,
   check: <><rect x="4" y="4" width="16" height="16" rx="3" /><path d="m8 12 2.5 2.5L16 9" /></>,
@@ -98,7 +96,6 @@ export function Sidebar({ activePage, onNavigate, version }: SidebarProps) {
           <NavIcon name={item.icon} />
         </span>
         <span className="nav-item-label">{item.label}</span>
-        {item.id === "chat" && <span className="nav-item-shortcut">N</span>}
       </button>
     );
   };

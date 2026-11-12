@@ -1,6 +1,6 @@
 # Sync AI Desktop Architecture
 
-> This document describes the intended architecture and boundaries, with Phase 1 scaffold status called out separately from planned systems.
+> This document describes the intended architecture and boundaries, distinguishing source-implemented Phase 2 shell/lifecycle work from planned or runtime-unverified systems.
 
 ## 1. Product and technology direction
 
