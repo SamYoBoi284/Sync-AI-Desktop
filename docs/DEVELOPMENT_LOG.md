@@ -30,3 +30,13 @@ Chronological record of meaningful implementation sessions. Keep entries factual
 - Disabled packaging until app icon and installer configuration are ready.
 - Source files were committed and fetched back from GitHub for verification.
 - Validation attempt: Node.js v22.16.0 and npm 10.9.2 are available in the execution container. Rust/Cargo are absent, and network DNS to GitHub/npm is unavailable, so dependencies could not be installed and no build or Tauri launch could be run. Vite 8 requires Node 20.19+ or 22.12+, so the available Node version meets that requirement.
+
+
+## 2026-11-12 — Phase 2 startup lifecycle foundation
+
+- Added `tauri-plugin-single-instance` as the first registered Tauri plugin. Subsequent launches restore, unminimize and focus the existing main window.
+- Added a Rust atomic startup gate consumed by the first webview bootstrap call, preventing splash replay on tray restore or same-process page reload.
+- Added a Sync-branded loading screen that waits for the native metadata handshake and a short minimum display interval; it does not wait for model initialization.
+- Added a Rust-created native tray icon with Open, Hide and Exit actions. Left-click restores where supported; closing the main window hides it to tray.
+- Updated architecture, project tracker and README with source-versus-runtime status.
+- Validation: GitHub source and branch were inspected; no npm install, frontend build, Cargo check, Tauri launch or Windows interaction test was run. The code is committed but runtime-unverified.

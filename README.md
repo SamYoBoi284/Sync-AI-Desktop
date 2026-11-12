@@ -23,7 +23,7 @@ The frontend recreates and adapts the Android application's visual language and 
 **Phase 1 foundation scaffold created.** The repository now contains a Tauri 2 + React + TypeScript + Vite app shell and a minimal Rust metadata command. The initial screen is deliberately a foundation/status page, not a working chat application.
 
 Not implemented yet:
-- Chat persistence or local inference
+- Interactive chat UI, chat persistence or local inference
 - GGUF model import/load/unload
 - SQLite or Workspace storage
 - File Library or Tasks & Notes
@@ -59,7 +59,7 @@ Running only **npm run dev** opens the browser preview. The Rust bridge is avail
 
 Sync AI must never have unrestricted access to the host computer. Every AI-invoked tool operation, including reads, requires fresh one-time approval for its exact action and scope. Approval expires after that operation and cannot become a permanent permission. Model output is an untrusted proposal, never execution authority.
 
-The initial Tauri capability exposes only the core default capability. No shell, filesystem, process or opener plugin is installed. Packaging is currently disabled until the application icon and installer configuration are ready.
+The main-window capability still exposes only the core default capability. No shell, filesystem, process or opener plugin is installed. The tray mark is currently generated in Rust; final application icon assets and installer configuration are still pending, so packaging remains disabled.
 
 ## Repository map
 

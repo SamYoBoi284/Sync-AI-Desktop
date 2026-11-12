@@ -164,3 +164,170 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+
+/* First-process startup splash. It is removed after the native bootstrap handshake. */
+.startup-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #f1f0fb;
+  background:
+    radial-gradient(ellipse at 50% 44%, rgba(112, 78, 190, 0.2), transparent 34%),
+    radial-gradient(ellipse at 50% 100%, rgba(69, 174, 199, 0.08), transparent 42%),
+    #090a12;
+  animation: startupFadeIn 360ms ease-out both;
+}
+.startup-screen::before,
+.startup-screen::after {
+  position: absolute;
+  width: min(72vw, 720px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(168, 121, 255, 0.07);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+.startup-screen::after {
+  width: min(54vw, 540px);
+  border-color: rgba(104, 216, 235, 0.06);
+  transform: rotate(34deg) scaleY(0.55);
+}
+.startup-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: min(360px, calc(100vw - 40px));
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.startup-core {
+  position: relative;
+  display: grid;
+  width: 178px;
+  height: 178px;
+  place-items: center;
+  margin-bottom: 27px;
+}
+.startup-core-ring {
+  position: absolute;
+  border: 1px solid rgba(168, 121, 255, 0.28);
+  border-radius: 50%;
+}
+.startup-core-ring--outer {
+  width: 166px;
+  height: 166px;
+  transform: rotate(-28deg) scaleY(0.64);
+  animation: startupOrbit 12s linear infinite;
+}
+.startup-core-ring--inner {
+  width: 132px;
+  height: 132px;
+  border-color: rgba(104, 216, 235, 0.24);
+  transform: rotate(42deg) scaleY(0.72);
+}
+.startup-core-orb {
+  width: 74px;
+  height: 74px;
+  border: 1px solid rgba(224, 209, 255, 0.76);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 27%, rgba(255, 255, 255, 0.95), transparent 7%),
+    radial-gradient(circle at 36% 34%, #c7adff 0%, #9163e8 29%, #443078 67%, #15162a 100%);
+  box-shadow: 0 0 28px rgba(157, 112, 245, 0.52), 0 0 82px rgba(115, 95, 220, 0.22),
+    inset -9px -10px 20px rgba(5, 7, 19, 0.72), inset 6px 6px 13px rgba(255, 255, 255, 0.22);
+  animation: startupPulse 2.8s ease-in-out infinite;
+}
+.startup-core-spark {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #70dcec;
+  box-shadow: 0 0 17px rgba(112, 220, 236, 0.95);
+}
+.startup-core-spark--one { top: 22px; left: 38px; }
+.startup-core-spark--two { right: 27px; bottom: 34px; width: 4px; height: 4px; background: #b18cff; }
+.startup-wordmark {
+  margin: 0;
+  color: #f4f1ff;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+}
+.startup-edition {
+  margin: 8px 0 0;
+  color: #8889a8;
+  font: 8px var(--mono);
+  letter-spacing: 0.28em;
+}
+.startup-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 41px;
+  color: #aaa3c4;
+  font: 8px var(--mono);
+  letter-spacing: 0.12em;
+}
+.startup-status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #68d8eb;
+  box-shadow: 0 0 12px rgba(104, 216, 235, 0.8);
+  animation: startupBlink 1.5s ease-in-out infinite;
+}
+.startup-progress {
+  width: 180px;
+  height: 2px;
+  overflow: hidden;
+  margin-top: 17px;
+  border-radius: 2px;
+  background: rgba(168, 121, 255, 0.16);
+}
+.startup-progress span {
+  display: block;
+  width: 38%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #a879ff, #68d8eb);
+  box-shadow: 0 0 12px rgba(168, 121, 255, 0.5);
+  animation: startupProgress 1.7s ease-in-out infinite;
+}
+.startup-footnote {
+  margin: 14px 0 0;
+  color: #656782;
+  font: 7px var(--mono);
+  letter-spacing: 0.12em;
+}
+@keyframes startupFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes startupPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.055); }
+}
+@keyframes startupOrbit {
+  from { rotate: 0deg; }
+  to { rotate: 360deg; }
+}
+@keyframes startupBlink {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+@keyframes startupProgress {
+  0% { transform: translateX(-115%); }
+  100% { transform: translateX(300%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .startup-screen, .startup-core-ring--outer, .startup-core-orb,
+  .startup-status-dot, .startup-progress span {
+    animation: none !important;
+  }
+}

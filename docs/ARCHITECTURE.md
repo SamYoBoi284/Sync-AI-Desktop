@@ -139,7 +139,19 @@ Android-specific features such as contacts/calls, Android intents, wake-word for
 
 Report only what the Windows APIs actually measure. Distinguish process-wide CPU and memory from host-wide metrics. Do not invent per-library or per-model memory splits. Mark estimates as estimates and make diagnostics export an explicit user action.
 
-## 10. Current Phase 1 scaffold
+## 10. Startup, single-instance and tray lifecycle
+
+The desktop process owns this lifecycle; React only presents the startup state.
+
+- Register `tauri-plugin-single-instance` before any other plugin. A second launch is forwarded to the existing process, whose callback restores, unminimizes and focuses the `main` window.
+- A Rust-managed atomic startup gate is consumed by the first webview bootstrap call. It authorizes the branded startup splash once per process; page reloads and tray restores do not consume another splash.
+- The splash is not a model-loading screen. It covers the initial native bootstrap handshake only and must never wait for a GGUF model to load.
+- A native tray icon is created by Rust. Left-click restores the window on platforms that emit tray click events; the context menu offers Open, Hide and Exit.
+- Closing the main window prevents destruction and hides it to the tray. Exit from the tray menu terminates the process. The next process launch receives a fresh startup gate and splash.
+- The tray icon artwork is generated as a small RGBA image in Rust until final application branding assets are added.
+- This lifecycle source is implemented, but Windows compilation and interaction tests remain pending.
+
+## 11. Current scaffold and implementation status
 
 Created in the repository:
 - React 19 + TypeScript 6 frontend structure with Vite 8 tooling.
@@ -147,6 +159,9 @@ Created in the repository:
 - One read-only command, get_app_info, returning static app version, OS and architecture metadata.
 - Typed frontend bridge for that command.
 - Responsive foundation screen showing native-bridge or browser-preview state.
+- First-process startup splash with an atomic Rust gate so tray restores and same-process webview reloads do not replay it.
+- Rust single-instance plugin registration and main-window focus/restore callback.
+- Native system tray with generated Sync mark, Open/Hide/Exit actions, left-click restore where supported, and close-to-tray behavior.
 - Reduced-motion CSS handling.
 - Restrictive CSP with no remote resource sources.
 - Minimal main-window capability with core:default only.
@@ -155,7 +170,7 @@ Created in the repository:
 
 The metadata command does not inspect user files or perform privileged operations. The frontend navigation labels are explicitly marked planned and are not functional routes.
 
-## 11. Current code organization
+## 12. Current code organization
 
 ~~~text
 src/
@@ -179,7 +194,7 @@ src-tauri/
 
 Additional folders will be created as implementation boundaries are needed; do not populate the repository with empty placeholders.
 
-## 12. Open implementation decisions
+## 13. Open implementation decisions
 
 - SQLite schema and migration approach.
 - llama.cpp build configuration and FFI wrapper.
@@ -189,6 +204,6 @@ Additional folders will be created as implementation boundaries are needed; do n
 - Packaging, signing and update strategy.
 - License selection and third-party notices.
 
-## 13. Validation status
+## 14. Validation status
 
-The scaffold has been committed to GitHub and the source files have been retrieved for verification. The project has not yet been built on Windows in this session. Dependency installation, npm typecheck/build, cargo check, Tauri development launch and installer packaging are therefore unverified.
+The scaffold has been committed to GitHub and the source files have been retrieved for verification. The project has not yet been built on Windows in this session. Dependency installation, npm typecheck/build, cargo check, Tauri development launch, single-instance forwarding, tray interactions, close-to-tray behavior and installer packaging are therefore unverified.

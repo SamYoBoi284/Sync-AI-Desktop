@@ -14,8 +14,8 @@
 
 ## 2. Current status
 
-**Phase:** 1 — Tauri + React + TypeScript foundation scaffold  
-**Status:** The Phase 1 source scaffold is committed. It contains a React/Vite desktop UI foundation, Tauri 2 configuration, Rust application entry point and one harmless app-metadata IPC command. No chat, inference, persistence or computer-control feature is implemented.
+**Phase:** 2 — desktop lifecycle foundation (first slice)  
+**Status:** Phase 1 source remains committed. The first Phase 2 slice now adds a first-process startup splash, Rust single-instance enforcement, a native tray icon/menu, close-to-tray behavior and restore/focus handling. These changes are source-committed but have not been built or run on Windows. Chat, inference, persistence and computer-control features are not implemented.
 
 ### Verified in this repository
 
@@ -27,12 +27,18 @@
 - The main-window capability contains core:default only.
 - No shell, filesystem, process or opener plugin is added.
 - The frontend status page distinguishes the native bridge from browser preview.
+- Rust registers the Tauri single-instance plugin first and restores/focuses the existing main window on subsequent process launches.
+- Rust owns an atomic startup-splash gate consumed once per process.
+- A native tray menu provides Open, Hide and Exit; left-click restores where supported.
+- Closing the main window hides it instead of terminating the process.
 - Key scaffold files and updated branch head were fetched back from GitHub.
 
 ### Not yet implemented or verified
 
 - npm dependency installation and package lockfile
 - Frontend typecheck/production build
+- Rust compilation of the single-instance and tray lifecycle implementation
+- Windows runtime verification of first-start splash, same-process reload behavior, tray restore, close-to-tray, second-launch focus and Exit
 - Tauri development launch on Windows
 - Cargo check/build on Windows
 - SQLite schema or migrations
@@ -70,6 +76,8 @@
 | Area | Direction | Status |
 |---|---|---|
 | Desktop shell | Tauri 2 | Agreed |
+| Single instance | tauri-plugin-single-instance | Source added; runtime unverified |
+| System tray | Tauri tray-icon API | Source added; runtime unverified |
 | Backend | Rust | Agreed |
 | Frontend | React + TypeScript | **Approved by user on 2026-11-12** |
 | Frontend build tool | Vite | Selected |
@@ -81,7 +89,7 @@
 
 The Tauri-maintained create-tauri-app project includes a React TypeScript template. Tauri's frontend documentation recommends Vite for SPA frameworks. The starter uses React 19, TypeScript 6 and Vite 8 dependency ranges from the maintained React-TS template. Dependency installation is not yet verified.
 
-Windows dev prerequisites to check on the actual build machine: Rust stable MSVC, Microsoft C++ Build Tools (Desktop development with C++), WebView2, and a Node.js version compatible with the selected Vite release. WebView2 is included on many Windows 10 version 1803+ installations, but the local machine still needs verification.
+Windows dev prerequisites to check on the actual build machine: Rust stable MSVC (at least 1.90 for the current single-instance plugin release), Microsoft C++ Build Tools (Desktop development with C++), WebView2, and a Node.js version compatible with the selected Vite release. WebView2 is included on many Windows 10 version 1803+ installations, but the local machine still needs verification.
 
 ## 5. Android source audit baseline
 
@@ -194,7 +202,7 @@ Tauri capabilities are an additional boundary, not a replacement for per-operati
 
 1. Phase 0 — Repository foundation and source-to-desktop spec. Complete.
 2. Phase 1 — Tauri 2 + React + TypeScript + Vite scaffold and minimal metadata IPC command. Source committed; builds not yet verified.
-3. Phase 2 — Desktop shell, sidebar, chat UI, Sync Core, themes and settings.
+3. Phase 2 — Desktop shell, startup/tray lifecycle, sidebar, chat UI, Sync Core, themes and settings. Startup splash, single-instance and tray lifecycle source are implemented; Windows validation is pending.
 4. Phase 3 — SQLite schema/migrations, chat CRUD, Android backup import/export.
 5. Phase 4 — GGUF manager and minimal Windows llama.cpp FFI proof of concept.
 6. Phase 5 — Streamed local inference, Workspace, File Library, Tasks & Notes and resource metrics.
@@ -240,4 +248,34 @@ Do not implement computer-control tools before the approval model and its tests 
 
 ## 13. Exact next step
 
-On the Windows development machine, install/verify Node.js 22.12+ (or 20.19+), Rust stable MSVC, Microsoft C++ Build Tools with Desktop development with C++, and WebView2. Run npm install to generate package-lock.json, npm run build, then npm run tauri dev and verify the get_app_info handshake. Resolve actual build errors before beginning the interactive chat UI. Do not add filesystem or shell access as a shortcut.
+On the personal Windows development machine only, verify Node.js 22.12+ (or 20.19+), Rust stable MSVC 1.90+, Microsoft C++ Build Tools with Desktop development with C++, and WebView2. Run `npm install`, `npm run build`, `cargo check` from `src-tauri`, then `npm run tauri dev`. Test: first launch shows the splash once; tray restore does not; closing hides to tray; tray Open restores; a second executable launch focuses the existing process; tray Exit terminates it. Do not use the work PC or add filesystem/shell access as a shortcut.
+
+
+## 14. Phase 2 startup lifecycle slice — 2026-11-12
+
+### Implemented in source
+- Added the Tauri single-instance plugin as the first registered plugin.
+- Added the Rust atomic startup gate and frontend startup-splash handshake.
+- Added the branded loading screen with reduced-motion handling. It waits for the initial app metadata handshake and a brief minimum presentation interval; it does not wait for a model.
+- Added a native tray icon generated in Rust and Open/Hide/Exit menu actions.
+- Added left-click tray restoration where the platform emits tray click events.
+- Changed main-window close behavior to hide the window. Explicit tray Exit terminates the process.
+- Updated architecture, README, development log and this tracker.
+
+### Changed files
+- `src-tauri/Cargo.toml`
+- `src-tauri/src/lib.rs`
+- `src/main.tsx`
+- `src/App.tsx`
+- `src/services/nativeBridge.ts`
+- `src/components/startup/LoadingScreen.tsx` (new)
+- `src/styles.css`
+- `docs/ARCHITECTURE.md`
+- `docs/DEVELOPMENT_LOG.md`
+- `CONTEXT_TRACKER.md`
+- `README.md`
+
+### Validation
+- Source files and repository branch head were inspected before editing.
+- No npm install, frontend build, Cargo check, Tauri launch or Windows interaction test was run in this environment.
+- Treat all new behavior as implemented in source but not yet runtime-verified.

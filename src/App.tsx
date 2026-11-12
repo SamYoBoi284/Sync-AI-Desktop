@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getAppInfo, type AppInfo } from "./services/nativeBridge";
+import { LoadingScreen } from "./components/startup/LoadingScreen";
 
 type BridgeState =
   | { kind: "checking" }
@@ -12,13 +13,18 @@ const navigation = [
   { heading: "SYSTEM", entries: ["Local models", "Appearance", "Runtime"] },
 ];
 
-function App() {
+interface AppProps {
+  showStartupSplash: boolean;
+}
+
+function App({ showStartupSplash }: AppProps) {
   const [bridge, setBridge] = useState<BridgeState>({ kind: "checking" });
+  const [splashVisible, setSplashVisible] = useState(showStartupSplash);
 
   useEffect(() => {
     let active = true;
 
-    getAppInfo()
+    const bridgeRequest = getAppInfo()
       .then((info) => {
         if (active) setBridge({ kind: "connected", info });
       })
@@ -27,15 +33,25 @@ function App() {
         if (active) setBridge({ kind: "preview" });
       });
 
+    // Keep the branded splash visible briefly, but never wait for a local model to load.
+    const minimumSplashTime = showStartupSplash
+      ? new Promise<void>((resolve) => window.setTimeout(resolve, 850))
+      : Promise.resolve();
+
+    Promise.all([bridgeRequest, minimumSplashTime]).finally(() => {
+      if (active) setSplashVisible(false);
+    });
+
     return () => {
       active = false;
     };
-  }, []);
+  }, [showStartupSplash]);
 
   const version = bridge.kind === "connected" ? bridge.info.version : "0.1.0";
 
   return (
-    <main className="app-shell">
+    <>
+      <main className="app-shell" aria-hidden={splashVisible}>
       <aside className="sidebar" aria-label="Main navigation preview">
         <div className="brand-lockup">
           <div className="brand-mark" aria-hidden="true">
@@ -234,7 +250,9 @@ function App() {
           </div>
         </div>
       </section>
-    </main>
+      </main>
+      {splashVisible && <LoadingScreen />}
+    </>
   );
 }
 
