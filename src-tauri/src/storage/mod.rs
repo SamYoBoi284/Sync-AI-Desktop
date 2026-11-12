@@ -113,6 +113,7 @@ impl Database {
             params![json, message_id, chat_id],
         ).map_err(db_error)?;
         if changed == 0 { return Err("Assistant message not found".into()); }
+        connection.execute("UPDATE chats SET updated_at = ?1 WHERE id = ?2", params![now(), chat_id]).map_err(db_error)?;
         Ok(())
     }
 
@@ -379,7 +380,8 @@ mod tests {
         let db = memory_db();
         let chat = db.create_chat(None).unwrap();
         let mut backup = db.export_backup().unwrap();
-        backup.chats.push(backup.chats[0].clone());
+        let duplicate = backup.chats[0].clone();
+        backup.chats.push(duplicate);
         assert!(db.import_backup(backup).is_err());
         assert_eq!(db.list_chats(None, None, None).unwrap().len(), 1);
         assert_eq!(chat.title, "New conversation");
