@@ -28,6 +28,17 @@ pub struct WorkspaceArtifact {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct WorkspaceArtifactSummary {
+    pub id: String,
+    pub title: String,
+    pub kind: String,
+    pub include_in_context: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NewWorkspaceArtifact {
     pub title: String,
     pub kind: String,
@@ -82,6 +93,17 @@ pub struct NoteRecord {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct NoteSummary {
+    pub id: String,
+    pub title: String,
+    pub pinned: bool,
+    pub include_in_context: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NoteInput {
     pub title: String,
     pub content: String,
@@ -110,18 +132,17 @@ pub struct LibraryImportResult {
 }
 
 impl Database {
-    pub fn list_workspace_artifacts(&self, query: Option<String>) -> Result<Vec<WorkspaceArtifact>, String> {
+    pub fn list_workspace_artifacts(&self, query: Option<String>) -> Result<Vec<WorkspaceArtifactSummary>, String> {
         let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
         let needle = query.unwrap_or_default().trim().to_string();
         let pattern = format!("%{needle}%");
         let mut statement = connection.prepare(
-            "SELECT id, title, kind, content, source_chat_id, source_message_id,
-                    include_in_context, created_at, updated_at
+            "SELECT id, title, kind, include_in_context, created_at, updated_at
              FROM workspace_artifacts
              WHERE (?1 = '' OR title LIKE ?2 OR content LIKE ?2)
              ORDER BY updated_at DESC LIMIT 200"
         ).map_err(db_error)?;
-        let rows = statement.query_map(params![needle, pattern], artifact_from_row).map_err(db_error)?;
+        let rows = statement.query_map(params![needle, pattern], artifact_summary_from_row).map_err(db_error)?;
         rows.collect::<Result<Vec<_>, _>>().map_err(db_error)
     }
 
@@ -253,17 +274,22 @@ impl Database {
         Ok(())
     }
 
-    pub fn list_notes(&self, query: Option<String>) -> Result<Vec<NoteRecord>, String> {
+    pub fn list_notes(&self, query: Option<String>) -> Result<Vec<NoteSummary>, String> {
         let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
         let needle = query.unwrap_or_default().trim().to_string();
         let pattern = format!("%{needle}%");
         let mut statement = connection.prepare(
-            "SELECT id, title, content, pinned, include_in_context, created_at, updated_at
+            "SELECT id, title, pinned, include_in_context, created_at, updated_at
              FROM notes WHERE (?1 = '' OR title LIKE ?2 OR content LIKE ?2)
              ORDER BY pinned DESC, updated_at DESC LIMIT 500"
         ).map_err(db_error)?;
-        let rows = statement.query_map(params![needle, pattern], note_from_row).map_err(db_error)?;
+        let rows = statement.query_map(params![needle, pattern], note_summary_from_row).map_err(db_error)?;
         rows.collect::<Result<Vec<_>, _>>().map_err(db_error)
+    }
+
+    pub fn get_note(&self, id: &str) -> Result<NoteRecord, String> {
+        let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
+        load_note(&connection, id)?.ok_or_else(|| "Note not found".to_string())
     }
 
     pub fn create_note(&self, input: NoteInput) -> Result<NoteRecord, String> {
@@ -383,6 +409,14 @@ impl Database {
     }
 }
 
+fn artifact_summary_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<WorkspaceArtifactSummary> {
+    Ok(WorkspaceArtifactSummary {
+        id: row.get(0)?, title: row.get(1)?, kind: row.get(2)?,
+        include_in_context: row.get::<_, i64>(3)? != 0,
+        created_at: row.get(4)?, updated_at: row.get(5)?,
+    })
+}
+
 fn artifact_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<WorkspaceArtifact> {
     Ok(WorkspaceArtifact {
         id: row.get(0)?, title: row.get(1)?, kind: row.get(2)?, content: row.get(3)?,
@@ -411,6 +445,14 @@ fn load_task(connection: &Connection, id: &str) -> Result<Option<TaskRecord>, St
         "SELECT id, title, details, status, priority, due_date, created_at, updated_at FROM tasks WHERE id = ?1",
         [id], task_from_row
     ).optional().map_err(db_error)
+}
+
+fn note_summary_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<NoteSummary> {
+    Ok(NoteSummary {
+        id: row.get(0)?, title: row.get(1)?, pinned: row.get::<_, i64>(2)? != 0,
+        include_in_context: row.get::<_, i64>(3)? != 0,
+        created_at: row.get(4)?, updated_at: row.get(5)?,
+    })
 }
 
 fn note_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<NoteRecord> {
