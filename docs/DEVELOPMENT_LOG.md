@@ -9,7 +9,7 @@ Chronological record of meaningful implementation sessions. Keep entries factual
 - Android backup v1 and raw chats.json compatibility are removed from desktop requirements.
 - Phase 3 retains SQLite, chat/message CRUD, settings persistence, History search/rename/delete/reopen and transactional import/export.
 - Added docs/PHASE3_DATA_CONTRACT.md as the implementation contract.
-- This entry records scope only; no database or UI implementation is claimed.
+- This entry records scope only; implementation is tracked in the subsequent Phase 3 source entry.
 
 ## 2026-11-12 — Initial repository setup
 
