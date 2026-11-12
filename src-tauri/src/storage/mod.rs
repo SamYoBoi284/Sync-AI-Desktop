@@ -21,37 +21,8 @@ const MAX_MESSAGE_BYTES: usize = 1_000_000;
 const MAX_DIAGNOSTICS_BYTES: usize = 64 * 1024;
 
 pub struct Database {
-    connection: Mutex<Connection>, 
-    #[test]
-    fn diagnostics_are_rejected_on_user_messages() {
-        let db = memory_db();
-        let chat = db.create_chat(None).unwrap();
-        let diagnostics = MessageDiagnostics {
-            generation_id: None, model_id: None, model_label: None, backend: None, backend_version: None,
-            status: None, prompt_tokens: None, generated_tokens: None, prompt_eval_ms: None,
-            generation_ms: None, tokens_per_second: None, context_size: None, max_context_size: None,
-            temperature: None, stop_reason: None, error_code: None, error_message: None,
-            started_at: None, finished_at: None,
-        };
-        let result = db.append_message(&chat.id, NewMessage {
-            role: MessageRole::User, body: "hello".into(), diagnostics: Some(diagnostics),
-        });
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn duplicate_chat_ids_inside_backup_are_rejected() {
-        let db = memory_db();
-        let chat = db.create_chat(None).unwrap();
-        let mut backup = db.export_backup().unwrap();
-        backup.chats.push(backup.chats[0].clone());
-        assert!(db.import_backup(backup).is_err());
-        assert_eq!(db.list_chats(None, None, None).unwrap().len(), 1);
-        assert_eq!(chat.title, "New conversation");
-    }
-
+    connection: Mutex<Connection>,
 }
-
 impl Database {
     pub fn open(path: &Path) -> Result<Self, String> {
         if let Some(parent) = path.parent() {
@@ -386,4 +357,32 @@ mod tests {
         assert_eq!(result.skipped_existing_chats, 1);
         assert_eq!(result.imported_chats, 0);
     }
+    #[test]
+    fn diagnostics_are_rejected_on_user_messages() {
+        let db = memory_db();
+        let chat = db.create_chat(None).unwrap();
+        let diagnostics = MessageDiagnostics {
+            generation_id: None, model_id: None, model_label: None, backend: None, backend_version: None,
+            status: None, prompt_tokens: None, generated_tokens: None, prompt_eval_ms: None,
+            generation_ms: None, tokens_per_second: None, context_size: None, max_context_size: None,
+            temperature: None, stop_reason: None, error_code: None, error_message: None,
+            started_at: None, finished_at: None,
+        };
+        let result = db.append_message(&chat.id, NewMessage {
+            role: MessageRole::User, body: "hello".into(), diagnostics: Some(diagnostics),
+        });
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn duplicate_chat_ids_inside_backup_are_rejected() {
+        let db = memory_db();
+        let chat = db.create_chat(None).unwrap();
+        let mut backup = db.export_backup().unwrap();
+        backup.chats.push(backup.chats[0].clone());
+        assert!(db.import_backup(backup).is_err());
+        assert_eq!(db.list_chats(None, None, None).unwrap().len(), 1);
+        assert_eq!(chat.title, "New conversation");
+    }
+
 }
