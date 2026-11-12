@@ -228,7 +228,7 @@ fn load_chat(connection: &Connection, chat_id: &str) -> Result<Option<ChatDetail
     let rows = statement.query_map([chat_id], |r| {
         let role: String = r.get(1)?;
         let diagnostics: Option<String> = r.get(5)?;
-        Ok((r.get::<_, String>(0)?, role, r.get::<_, String>(2)?, r.get::<_, String>(3)?, r.get::<_, u64>(4)?, diagnostics))
+        Ok((r.get::<_, String>(0)?, role, r.get::<_, String>(2)?, r.get::<_, String>(3)?, r.get::<_, i64>(4)?, diagnostics))
     }).map_err(db_error)?;
     let mut messages = Vec::new();
     for row in rows {
