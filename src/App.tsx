@@ -17,6 +17,7 @@ interface AppProps {
 function App({ showStartupSplash }: AppProps) {
   const [activePage, setActivePage] = useState<PageId>("new-chat");
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const navigateToPage = (page: PageId) => { if (page === "history" || page === "new-chat") setSelectedChatId(null); setActivePage(page); };
   const openChatFromSidebar = (chatId: string) => { setSelectedChatId(chatId); setActivePage("history"); };
   const [bridgeKind, setBridgeKind] = useState<BridgeKind>("checking");
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
@@ -56,7 +57,7 @@ function App({ showStartupSplash }: AppProps) {
       const isNewChatShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "n";
       if (isNewChatShortcut) {
         event.preventDefault();
-        setActivePage("new-chat");
+        navigateToPage("new-chat");
       }
     };
 
@@ -69,7 +70,7 @@ function App({ showStartupSplash }: AppProps) {
   return (
     <>
       <div className="shell-root" aria-hidden={splashVisible}>
-        <Sidebar activePage={activePage} onNavigate={setActivePage} onOpenChat={openChatFromSidebar} />
+        <Sidebar activePage={activePage} onNavigate={navigateToPage} onOpenChat={openChatFromSidebar} />
         <main className="shell-main">
           <Topbar activePage={activePage} bridgeKind={bridgeKind} version={version} />
           <div className="shell-page-scroll">
@@ -78,7 +79,7 @@ function App({ showStartupSplash }: AppProps) {
             ) : activePage === "history" ? (
               <HistoryPage key={selectedChatId ?? "history"} initialChatId={selectedChatId} />
             ) : activePage === "settings" ? (
-              <SettingsPage onNavigate={setActivePage} />
+              <SettingsPage onNavigate={navigateToPage} />
             ) : activePage === "runtime" ? (
               <RuntimePage bridgeKind={bridgeKind} info={appInfo} />
             ) : (
