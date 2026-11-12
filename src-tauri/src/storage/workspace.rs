@@ -638,6 +638,33 @@ mod tests {
     }
 
     #[test]
+    fn library_relink_rejects_different_file_contents() {
+        let db = memory_db();
+        db.register_library_file(LibraryFileRecord {
+            id: "file-1".into(),
+            file_name: "original.txt".into(),
+            extension: Some("txt".into()),
+            source_path: "C:\\sync\\original.txt".into(),
+            size_bytes: 4,
+            sha256: "original-hash".into(),
+            added_at: "now".into(),
+            is_available: false,
+        }).unwrap();
+
+        let result = db.relink_library_file("file-1", LibraryFileRecord {
+            id: "candidate".into(),
+            file_name: "different.txt".into(),
+            extension: Some("txt".into()),
+            source_path: "C:\\sync\\different.txt".into(),
+            size_bytes: 4,
+            sha256: "different-hash".into(),
+            added_at: "now".into(),
+            is_available: true,
+        });
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn task_validation_rejects_unknown_statuses() {
         let db = memory_db();
         let result = db.create_task(TaskInput {
