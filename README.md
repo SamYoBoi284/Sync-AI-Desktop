@@ -20,18 +20,18 @@ The frontend recreates and adapts the Android application's visual language and 
 
 ## Current development status
 
-**Phase 2.2 sidebar refinement source committed.** The app has a navigable desktop shell, a New chat landing view, a Runtime view, and clearly-labelled preview screens. Startup splash, single-instance handling and tray lifecycle source are committed but have not been compiled or runtime-tested on Windows.
+**Current milestone: Phase 4 Stage 1 source committed.** The desktop shell, Phase 2.2 sidebar, Phase 3 SQLite chat/history layer and Phase 4 Stage 1 model registry/RAM preference source are committed. Startup/tray, database, model import and UI changes have not been compiled or runtime-tested on Windows.
 
 The sidebar now includes searchable recent conversations sourced from SQLite History, workspace/system navigation and a dedicated Settings destination. Settings controls are staged and are not presented as implemented.
 
 The New chat composer remains intentionally disabled until local inference is connected. Chat storage and History source are implemented in Phase 3; Windows runtime validation remains pending.
 
-**Phase 4 Stage 1 source is committed.** The GGUF model registry/import UI, SHA-256 deduplication, managed model storage, default selection/removal and host RAM detection are now implemented in source. The optional RAM Limiter preference is persisted in SQLite; model-load enforcement remains Stage 2 work. No build/runtime validation has been performed.
+**Phase 4 Stage 1 details:** The GGUF model registry/import UI, SHA-256 deduplication, managed model storage, default selection/removal and host RAM detection are implemented in source. The optional RAM Limiter preference is persisted in SQLite; model-load enforcement remains Stage 2 work. No build/runtime validation has been performed.
 
 **Phase 3 implementation source is committed.** The repository now contains the SQLite storage layer, typed Rust commands, per-message diagnostics data model, desktop backup validation/round-trip tests, and a connected History UI with search, rename, delete, import and export source. These changes have not been built or runtime-tested yet. Android backup compatibility is explicitly out of scope.
 
 Not implemented yet:
-- Individual Settings controls and preferences UI (the Settings destination is currently a staged page)
+- Appearance and broader preference controls (the RAM Limiter is implemented in source; theme/accent/motion controls remain planned)
 - Chat generation, streaming, queueing and cancellation
 - Windows build/runtime validation of the new SQLite and History implementation
 - GGUF model loading/unloading and llama.cpp inference (registry/import source now implemented)

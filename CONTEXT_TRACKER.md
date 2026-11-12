@@ -15,7 +15,7 @@
 ## 2. Current status
 
 **Phase:** 4 — local model engine, Stage 1 source committed; validation pending  
-**Status:** SQLite schema/migration v1, Rust chat/message/settings commands, per-assistant-message diagnostics persistence, versioned desktop backup validation/import/export, and a connected History UI are committed to main. Android backup compatibility is out of scope. No frontend build, Cargo test/check or Windows runtime test has been run.
+**Status:** SQLite schema/migrations v1-v2, Rust chat/message/settings/model-registry commands, per-assistant-message diagnostics persistence, versioned desktop backup validation/import/export, and a connected History UI are committed to main. Android backup compatibility is out of scope. No frontend build, Cargo test/check or Windows runtime test has been run.
 
 ### Verified in this repository
 
@@ -27,7 +27,9 @@
 - The main-window capability contains core:default only.
 - No shell, filesystem, process or opener plugin is added.
 - The frontend distinguishes the native bridge from browser preview.
-- Sidebar navigation is functional; History now has a source-implemented local chat interface, while other unimplemented feature destinations remain clearly labelled previews.
+- Sidebar navigation and SQLite-backed recent chats are source-implemented. History and Local Models have functional source interfaces; remaining unimplemented destinations are clearly labelled previews.
+- Phase 4 Stage 1 source adds a GGUF registry, native file-picker import, SHA-256 verification/deduplication, managed model storage, default selection/removal and host RAM detection.
+- Settings contains an optional RAM Limiter toggle and budget slider persisted through SQLite. It is off by default; Stage 2 still needs to enforce the budget during model loading.
 - Rust registers the Tauri single-instance plugin first and restores/focuses the existing main window on subsequent process launches.
 - Rust owns an atomic startup-splash gate consumed once per process.
 - A native tray menu provides Open, Hide and Exit; left-click restores where supported.
@@ -45,7 +47,7 @@
 - Local SQLite runtime/build validation and end-to-end Tauri IPC tests
 - Chat generation, streaming, queueing and cancellation
 - End-to-end backup file dialog/download testing on Windows
-- GGUF model manager
+- llama.cpp Windows integration, model loading/unloading and inference
 - llama.cpp Windows build/integration
 - Workspace, File Library, Tasks & Notes or voice
 - Permission/approval UI or enforcement

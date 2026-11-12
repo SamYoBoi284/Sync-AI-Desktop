@@ -372,7 +372,9 @@ mod tests {
         let db = memory_db();
         let connection = db.connection.lock().unwrap();
         let count: u32 = connection.query_row("SELECT COUNT(*) FROM schema_migrations", [], |r| r.get(0)).unwrap();
-        assert_eq!(count, 1);
+        assert_eq!(count, 2);
+        let model_table: bool = connection.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'models')", [], |r| r.get(0)).unwrap();
+        assert!(model_table);
     }
 
     #[test]
