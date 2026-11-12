@@ -368,3 +368,20 @@ Continue Phase 3 validation and hardening:
 - Rust unit test source was added for migration, per-message diagnostics persistence, backup round-trip, duplicate chat skipping, invalid diagnostics role and duplicate IDs in an imported backup.
 - The SQLite DDL, core list query, diagnostics-role constraint and cascade behavior were smoke-tested separately with Python sqlite3. No Rust/Cargo toolchain is available in the assistant execution environment. No Cargo test/check, npm build, Tauri launch or Windows runtime test has been run.
 - Treat all Phase 3 behavior as source-implemented but unverified until checked on the personal Windows development machine.
+
+
+## Latest update — Phase 2.2 sidebar redesign (source committed)
+
+- Sidebar now follows the approved layout: New chat; searchable recent conversations grouped by Today, Yesterday, Previous 7 days, Previous 30 days and Older; workspace destinations; system destinations; Settings in the footer; local-first footer retained.
+- Recent conversations load through the existing SQLite-backed listChats command. Selecting one opens History with that chat selected; See all opens full History.
+- Settings is a navigation destination using the staged preview treatment. Individual preference controls are not claimed as implemented.
+- No duplicate chat store was created. Android repository remains untouched.
+- Validation: source changes committed; no frontend build, Cargo check or Windows runtime/UI test run.
+
+## Phase 4 scope correction — exactly three stages
+
+1. **Model management + resource budget:** GGUF registry/import/hash/deduplication/metadata/selection/removal, host RAM detection, and optional user-enabled managed inference RAM budget with pre-load checks. This is not an OS-enforced hard process memory cap.
+2. **Native runtime + lifecycle:** Windows llama.cpp FFI, model load/unload, memory estimation and safe lifecycle handling.
+3. **Chat inference connection:** streaming, queueing, cancellation, context handling and per-assistant-message diagnostics.
+
+Workspace, File Library, Tasks & Notes and broader resource metrics remain Phase 5. No 4.1/4.2/4.3-style micro-numbering will be used.

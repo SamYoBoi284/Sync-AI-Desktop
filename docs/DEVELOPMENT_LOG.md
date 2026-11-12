@@ -72,3 +72,13 @@ Chronological record of meaningful implementation sessions. Keep entries factual
 - Added a History UI with search, create, open, rename, delete, diagnostics disclosure, backup import and backup export.
 - Marked History as an active navigation destination. Android backup compatibility remains explicitly out of scope.
 - Validation: source committed and key files fetched back from GitHub. The SQLite DDL, core list query, diagnostics constraint and cascade behavior were smoke-tested separately with Python sqlite3. The execution environment has Node.js 22.16.0/npm 10.9.2 but no Rust/Cargo; dependencies cannot be installed here. No TypeScript build, Cargo test/check or Windows runtime test is claimed.
+
+
+## 2026-11-12 — Phase 2.2 sidebar redesign
+
+- Replaced the History navigation row with a recent-conversations area, including search and date grouping (Today, Yesterday, Previous 7 days, Previous 30 days and Older).
+- Recent rows use the SQLite-backed listChats command and route selection into History with the selected conversation ID.
+- Added a Settings entry to the sidebar footer and a Settings destination using the existing staged feature-preview treatment.
+- Kept workspace and system destinations in the main navigation and preserved the local-first footer.
+- No separate frontend-only history cache or duplicate persistence layer was added.
+- Validation: source reviewed and committed. No npm build, Cargo check, Tauri launch or Windows UI test was run.

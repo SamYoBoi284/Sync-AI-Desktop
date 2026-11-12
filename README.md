@@ -20,13 +20,14 @@ The frontend recreates and adapts the Android application's visual language and 
 
 ## Current development status
 
-**Phase 2.1 desktop shell source prepared.** The app has a navigable desktop shell, a New chat landing view, a Runtime view, and clearly-labelled preview screens. Startup splash, single-instance handling and tray lifecycle source are committed but have not been compiled or runtime-tested on Windows.
+**Phase 2.2 sidebar refinement source committed.** The app has a navigable desktop shell, a New chat landing view, a Runtime view, and clearly-labelled preview screens. Startup splash, single-instance handling and tray lifecycle source are committed but have not been compiled or runtime-tested on Windows.
 
-The New chat composer remains intentionally disabled until local inference is connected. Chat storage and History are being implemented in Phase 3.
+The New chat composer remains intentionally disabled until local inference is connected. Chat storage and History source are implemented in Phase 3; Windows runtime validation remains pending.
 
-**Phase 3 implementation is in progress.** The repository now contains the SQLite storage layer, typed Rust commands, per-message diagnostics data model, desktop backup validation/round-trip tests, and a connected History UI with search, rename, delete, import and export source. These changes have not been built or runtime-tested yet. Android backup compatibility is explicitly out of scope.
+**Phase 3 implementation source is committed.** The repository now contains the SQLite storage layer, typed Rust commands, per-message diagnostics data model, desktop backup validation/round-trip tests, and a connected History UI with search, rename, delete, import and export source. These changes have not been built or runtime-tested yet. Android backup compatibility is explicitly out of scope.
 
 Not implemented yet:
+- Individual Settings controls and preferences UI (the Settings destination is currently a staged page)
 - Chat generation, streaming, queueing and cancellation
 - Windows build/runtime validation of the new SQLite and History implementation
 - GGUF model import/load/unload and llama.cpp inference

@@ -11,7 +11,7 @@
 - npm package manager.
 - Rust backend.
 - llama.cpp for local GGUF inference.
-- SQLite as the planned persistence layer; schema/migrations remain open.
+- SQLite persistence with schema v1, chat/message storage and settings table implemented in source; Windows runtime validation remains pending.
 - Offline-first core chat and inference.
 - Desktop project remains separate from the Android repository.
 
@@ -92,7 +92,7 @@ Use schema migrations, foreign keys and transactions for multi-row changes. Keep
 
 Chat backups use a desktop-native, versioned format named sync-ai-desktop-backup. Android backup compatibility is intentionally out of scope. Import validates the complete backup before committing, enforces bounds, skips conflicting chat IDs rather than overwriting local data, and never mutates the source file. Export/import preserves diagnostics attached to assistant messages.
 
-The schema and backup contract are specified in docs/PHASE3_DATA_CONTRACT.md; implementation remains pending.
+The schema and backup contract are specified in docs/PHASE3_DATA_CONTRACT.md; Phase 3 storage and History source are implemented, with Windows runtime validation pending.
 
 ## 7. Tool registry and approval broker
 
@@ -159,7 +159,7 @@ Created in the repository:
 - Read-only get_app_info command returning static app version, OS and architecture metadata.
 - consume_startup_splash command backed by a Rust atomic gate.
 - Typed frontend bridge for both commands.
-- Persistent React sidebar with functional page navigation and page-aware top bar.
+- Persistent React sidebar with searchable SQLite-backed recent conversations, workspace/system navigation, dedicated Settings destination and page-aware top bar.
 - Chat landing screen with Sync Core-inspired artwork and a disabled composer until model integration.
 - Staging pages for History, Workspace, Tasks & Notes, File Library, Local Models and Appearance.
 - Runtime page that displays only metadata returned by the Rust bridge.
@@ -172,7 +172,7 @@ Created in the repository:
 - No shell, filesystem, process, opener or other plugin surface.
 - Tauri bundling disabled until icon assets and installer decisions are ready.
 
-The metadata and splash-gate commands do not inspect user files or perform privileged operations. Sidebar navigation is functional, but the feature pages do not claim that their storage, inference or OS services are connected.
+The metadata and splash-gate commands do not inspect user files or perform privileged operations. Sidebar navigation and recent-chat routing are implemented in source. Settings is a staged destination; individual preference controls are not yet connected. Feature pages do not claim that their storage, inference or OS services are connected.
 
 ## 12. Current code organization
 
@@ -218,3 +218,14 @@ Additional folders will be created as implementation boundaries are needed; do n
 ## 14. Validation status
 
 The scaffold, lifecycle slice and navigable desktop shell have been committed to GitHub and the source files have been retrieved for review. The project has not yet been built on Windows in this session. Dependency installation, npm typecheck/build, cargo check, Tauri development launch, single-instance forwarding, tray interactions, close-to-tray behavior and installer packaging are therefore unverified.
+
+
+## 15. Phase 4 delivery shape
+
+Phase 4 is intentionally limited to **three stages**, with no additional numbered sub-phases:
+
+1. **Model management and resource budget:** GGUF import, hashing, deduplication, metadata, selection/removal, hardware RAM detection and an optional user-enabled managed inference RAM budget. This is an application-level allocation guard, not an OS-enforced hard process memory cap.
+2. **Native runtime and lifecycle:** Windows llama.cpp integration behind a narrow FFI, model load/unload, resource estimation, safe pre-load checks and clear runtime failures.
+3. **Chat inference connection:** streamed generation, queueing, cancellation, context handling and diagnostics attached to each assistant message.
+
+Workspace, File Library, Tasks & Notes and broader resource metrics move to Phase 5. This keeps Phase 4 broad enough to deliver a usable local chat loop without fragmenting it into micro-stages.
