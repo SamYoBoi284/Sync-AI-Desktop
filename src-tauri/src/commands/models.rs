@@ -11,7 +11,7 @@ use tauri::{AppHandle, State};
 use uuid::Uuid;
 
 use crate::{
-    commands::runtime::{managed_model_path, managed_models_dir, model_is_in_use},
+    commands::runtime::{managed_model_path, managed_models_dir},
     inference::{gguf::GgufMetadata, runtime::RuntimeManager},
     storage::{models::ModelRecord, Database},
 };
@@ -188,9 +188,7 @@ pub fn remove_model(
     runtime: State<'_, RuntimeManager>,
     model_id: String,
 ) -> Result<(), String> {
-    if model_is_in_use(&runtime, &model_id)? {
-        return Err("Wait for this model to finish loading or unload it before removing it.".into());
-    }
+    let _removal = runtime.reserve_removal(&model_id)?;
     let target = managed_model_path(&app, &db, &model_id)?;
     fs::remove_file(&target).map_err(|e| format!("Cannot remove model file: {e}"))?;
     db.delete_model_record(&model_id)

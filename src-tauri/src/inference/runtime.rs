@@ -59,7 +59,23 @@ pub struct LoadedModel {
 #[derive(Default)]
 struct RuntimeSlot {
     loading_model_id: Option<String>,
+    removing_model_id: Option<String>,
     loaded: Option<LoadedModel>,
+}
+
+pub struct ModelRemovalGuard<'a> {
+    runtime: &'a RuntimeManager,
+    model_id: String,
+}
+
+impl Drop for ModelRemovalGuard<'_> {
+    fn drop(&mut self) {
+        if let Ok(mut slot) = self.runtime.slot.lock() {
+            if slot.removing_model_id.as_deref() == Some(self.model_id.as_str()) {
+                slot.removing_model_id = None;
+            }
+        }
+    }
 }
 
 pub struct RuntimeManager {
@@ -92,6 +108,9 @@ impl RuntimeManager {
 
     pub fn begin_loading(&self, model_id: &str) -> Result<(), String> {
         let mut slot = self.slot.lock().map_err(|_| "Runtime state lock is unavailable".to_string())?;
+        if slot.removing_model_id.is_some() {
+            return Err("A model is being removed. Wait for that operation to finish before loading.".into());
+        }
         if slot.loading_model_id.is_some() {
             return Err("A model is already being loaded.".into());
         }
@@ -117,10 +136,19 @@ impl RuntimeManager {
         Ok(())
     }
 
-    pub fn is_in_use(&self, model_id: &str) -> Result<bool, String> {
-        let slot = self.slot.lock().map_err(|_| "Runtime state lock is unavailable".to_string())?;
-        Ok(slot.loading_model_id.as_deref() == Some(model_id)
-            || slot.loaded.as_ref().is_some_and(|model| model.model_id == model_id))
+    pub fn reserve_removal(&self, model_id: &str) -> Result<ModelRemovalGuard<'_>, String> {
+        let mut slot = self.slot.lock().map_err(|_| "Runtime state lock is unavailable".to_string())?;
+        if slot.loading_model_id.is_some() {
+            return Err("Wait for the current model load to finish before removing a model.".into());
+        }
+        if slot.loaded.as_ref().is_some_and(|model| model.model_id == model_id) {
+            return Err("Unload this model before removing it from the library.".into());
+        }
+        if slot.removing_model_id.is_some() {
+            return Err("Another model removal is already in progress.".into());
+        }
+        slot.removing_model_id = Some(model_id.to_string());
+        Ok(ModelRemovalGuard { runtime: self, model_id: model_id.to_string() })
     }
 
     pub fn unload(&self) -> Result<(), String> {
@@ -346,4 +374,22 @@ mod tests {
         };
         assert!(validate_preflight(&estimate).unwrap_err().contains("current available RAM"));
     }
-}
+
+    #[test]
+    fn removal_reservation_prevents_a_new_load_until_drop() {
+        let runtime = RuntimeManager::new();
+        {
+            let _guard = runtime.reserve_removal("model-a").unwrap();
+            assert!(runtime.begin_loading("model-a").is_err());
+        }
+        assert!(runtime.begin_loading("model-a").is_ok());
+    }
+
+    #[test]
+    fn removal_reservation_rejects_a_model_that_is_loading() {
+        let runtime = RuntimeManager::new();
+        runtime.begin_loading("model-a").unwrap();
+        assert!(runtime.reserve_removal("model-a").is_err());
+    }
+
+}}

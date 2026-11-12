@@ -88,10 +88,6 @@ pub fn unload_model(runtime: State<'_, RuntimeManager>) -> Result<RuntimeStatus,
     runtime.status()
 }
 
-pub(crate) fn model_is_in_use(runtime: &RuntimeManager, model_id: &str) -> Result<bool, String> {
-    runtime.is_in_use(model_id)
-}
-
 fn find_model(db: &Database, model_id: &str) -> Result<ModelRecord, String> {
     db.list_models()?.into_iter().find(|model| model.id == model_id)
         .ok_or_else(|| "Model was not found in the local registry.".into())
