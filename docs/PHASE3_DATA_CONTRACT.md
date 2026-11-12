@@ -1,6 +1,6 @@
 # Phase 3 — Local Data Contract
 
-Status: approved design; implementation pending.
+Status: approved contract; initial Rust storage and History UI source committed; build/runtime validation pending.
 
 Sync AI Desktop owns its data model and backup format. Android backup compatibility is not required.
 
