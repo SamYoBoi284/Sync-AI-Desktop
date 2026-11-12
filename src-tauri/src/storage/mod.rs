@@ -4,7 +4,7 @@ use std::path::Path;
 use std::sync::Mutex;
 
 use chrono::{SecondsFormat, Utc};
-use rusqlite::{params, Connection, OptionalExtension, Transaction};
+use rusqlite::{params, Connection, OptionalExtension};
 use uuid::Uuid;
 
 use self::models::{
