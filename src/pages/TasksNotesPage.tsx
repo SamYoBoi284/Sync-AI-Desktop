@@ -135,7 +135,7 @@ export function TasksNotesPage() {
             <label>Title<input value={taskDraft.title} onChange={event => setTaskDraft(current => ({ ...current, title: event.target.value }))} maxLength={200} placeholder="What needs doing?" required /></label>
             <label>Details<textarea value={taskDraft.details} onChange={event => setTaskDraft(current => ({ ...current, details: event.target.value }))} rows={3} placeholder="Optional details…" /></label>
             <div className="task-create-options">
-              <label>Priority<select value={taskDraft.priority} onChange={event => setTaskDraft(current => ({ ...current, priority: event.target.value }))}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label>
+              <label>Priority<select value={taskDraft.priority} onChange={event => setTaskDraft(current => ({ ...current, priority: event.target.value as TaskInput["priority"] }))}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label>
               <label>Due date<input type="date" value={taskDraft.dueDate ?? ""} onChange={event => setTaskDraft(current => ({ ...current, dueDate: event.target.value || null }))} /></label>
             </div>
             <button className="tasks-primary-button" type="submit" disabled={saving || !taskDraft.title.trim()}>{saving ? "Saving…" : "Add task"}</button>
@@ -151,7 +151,7 @@ export function TasksNotesPage() {
                     <small>{task.dueDate ? "Due " + task.dueDate : "No due date"} · Updated {new Date(task.updatedAt).toLocaleDateString()}</small>
                   </div>
                   <div className="task-card-controls">
-                    <select aria-label={"Status for " + task.title} value={task.status} onChange={event => void changeTask(task, { status: event.target.value })}>
+                    <select aria-label={"Status for " + task.title} value={task.status} onChange={event => void changeTask(task, { status: event.target.value as TaskInput["status"] })}>
                       <option value="todo">To do</option><option value="in-progress">In progress</option><option value="done">Done</option>
                     </select>
                     <button type="button" onClick={() => void removeTask(task)} aria-label={"Delete " + task.title}>×</button>
