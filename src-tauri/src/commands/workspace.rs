@@ -1,12 +1,12 @@
 use tauri::State;
 
 use crate::storage::{
-    workspace::{NewWorkspaceArtifact, NoteInput, TaskInput, WorkspaceArtifact, NoteRecord, TaskRecord, WorkspaceContextEntry},
+    workspace::{NewWorkspaceArtifact, NoteInput, NoteRecord, NoteSummary, TaskInput, TaskRecord, WorkspaceArtifact, WorkspaceArtifactSummary, WorkspaceContextEntry},
     Database,
 };
 
 #[tauri::command]
-pub fn list_workspace_artifacts(db: State<'_, Database>, query: Option<String>) -> Result<Vec<WorkspaceArtifact>, String> {
+pub fn list_workspace_artifacts(db: State<'_, Database>, query: Option<String>) -> Result<Vec<WorkspaceArtifactSummary>, String> {
     db.list_workspace_artifacts(query)
 }
 
@@ -56,8 +56,13 @@ pub fn delete_task(db: State<'_, Database>, task_id: String) -> Result<(), Strin
 }
 
 #[tauri::command]
-pub fn list_notes(db: State<'_, Database>, query: Option<String>) -> Result<Vec<NoteRecord>, String> {
+pub fn list_notes(db: State<'_, Database>, query: Option<String>) -> Result<Vec<NoteSummary>, String> {
     db.list_notes(query)
+}
+
+#[tauri::command]
+pub fn get_note(db: State<'_, Database>, note_id: String) -> Result<NoteRecord, String> {
+    db.get_note(&note_id)
 }
 
 #[tauri::command]
