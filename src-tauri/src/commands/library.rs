@@ -51,7 +51,8 @@ pub fn remove_library_file(db: State<'_, Database>, file_id: String) -> Result<(
 fn inspect_selected_file(selected: &Path) -> Result<LibraryFileRecord, String> {
     let source = selected.canonicalize()
         .map_err(|error| format!("Cannot resolve selected file: {error}"))?;
-    let metadata = std::fs::metadata(&source)
+    let mut file = File::open(&source).map_err(|error| format!("Cannot read selected file: {error}"))?;
+    let metadata = file.metadata()
         .map_err(|error| format!("Cannot inspect selected file: {error}"))?;
     if !metadata.is_file() || metadata.len() == 0 {
         return Err("Selected item is empty or is not a regular file.".into());
@@ -62,8 +63,10 @@ fn inspect_selected_file(selected: &Path) -> Result<LibraryFileRecord, String> {
 
     let file_name = source.file_name().and_then(|value| value.to_str())
         .ok_or("Selected filename is not valid UTF-8")?.to_string();
+    let source_path = source.to_str()
+        .ok_or("Selected path is not valid UTF-8")?.to_string();
     let extension = source.extension().and_then(|value| value.to_str()).map(str::to_ascii_lowercase);
-    let mut file = File::open(&source).map_err(|error| format!("Cannot read selected file: {error}"))?;
+    let before_modified = metadata.modified().ok();
     let mut hasher = Sha256::new();
     let mut buffer = [0_u8; 1024 * 1024];
     loop {
@@ -72,11 +75,17 @@ fn inspect_selected_file(selected: &Path) -> Result<LibraryFileRecord, String> {
         hasher.update(&buffer[..count]);
     }
 
+    let after = file.metadata()
+        .map_err(|error| format!("Cannot re-check selected file: {error}"))?;
+    if after.len() != metadata.len() || after.modified().ok() != before_modified {
+        return Err("Selected file changed while its fingerprint was being calculated. Please select it again.".into());
+    }
+
     Ok(LibraryFileRecord {
         id: Uuid::new_v4().to_string(),
         file_name,
         extension,
-        source_path: source.to_string_lossy().into_owned(),
+        source_path,
         size_bytes: metadata.len(),
         sha256: format!("{:x}", hasher.finalize()),
         added_at: Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true),
