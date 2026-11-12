@@ -20,13 +20,15 @@ The frontend recreates and adapts the Android application's visual language and 
 
 ## Current development status
 
-**Phase 2 desktop shell in progress.** The repository now includes the Tauri startup/tray lifecycle and a navigable React desktop shell with a chat landing screen, history, workspace, file, model, appearance and runtime destinations. These screens establish navigation and interaction structure; they do not imply that the underlying chat, storage or model services are connected.
+**Phase 2.1 desktop shell source prepared.** The app now has a navigable desktop shell, a New chat landing view, a Runtime view, and clearly-labelled preview screens for features that are not implemented yet. The startup splash, single-instance handling and system-tray lifecycle source are part of the current foundation, but these native behaviors have not yet been compiled or runtime-tested on Windows.
+
+The New chat composer is intentionally disabled. Chat persistence, message streaming and local inference are not connected, so the UI does not pretend to send messages.
 
 Not implemented yet:
-- Chat generation, message persistence or local inference (the chat destination is currently a non-functional UI shell)
-- GGUF model import/load/unload
-- SQLite or Workspace storage services
-- File Library or Tasks & Notes services
+- Chat persistence, message queueing, streaming or cancellation
+- GGUF model import/load/unload and llama.cpp inference
+- SQLite or Workspace storage
+- File Library or Tasks & Notes functionality
 - Voice, camera or recorder features
 - Host-computer tools or approval execution
 
@@ -44,13 +46,8 @@ Then, from the repository root:
 
 ~~~powershell
 npm install
-npm run tauri dev
-~~~
-
-To check the frontend production bundle:
-
-~~~powershell
 npm run build
+npm run tauri dev
 ~~~
 
 Running only **npm run dev** opens the browser preview. The Rust bridge is available only inside the Tauri desktop host.

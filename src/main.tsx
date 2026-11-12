@@ -4,6 +4,7 @@ import { isTauri } from "@tauri-apps/api/core";
 import App from "./App";
 import { consumeStartupSplash } from "./services/nativeBridge";
 import "./styles.css";
+import "./shell.css";
 
 const rootElement = document.getElementById("root");
 
