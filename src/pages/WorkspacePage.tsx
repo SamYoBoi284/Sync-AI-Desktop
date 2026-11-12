@@ -138,7 +138,7 @@ export function WorkspacePage() {
             <input value={draft.title} maxLength={200} onChange={event => setDraft(current => ({ ...current, title: event.target.value }))} placeholder="Give this artifact a name" />
           </label>
           <label className="workspace-field">Type
-            <select value={draft.kind} onChange={event => setDraft(current => ({ ...current, kind: event.target.value }))}>
+            <select value={draft.kind} onChange={event => setDraft(current => ({ ...current, kind: event.target.value as WorkspaceArtifactInput["kind"] }))}>
               <option value="document">Document</option><option value="report">Report</option><option value="code">Code</option><option value="snippet">Snippet</option><option value="other">Other</option>
             </select>
           </label>
