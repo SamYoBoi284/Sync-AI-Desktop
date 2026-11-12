@@ -2,6 +2,15 @@
 
 Chronological record of meaningful implementation sessions. Keep entries factual and link commits or pull requests when available.
 
+## 2026-11-12 — Phase 3 scope revision
+
+- User approved per-assistant-message diagnostics as part of persisted chat messages.
+- User requested chat backup export/import for future desktop versions; the desktop format will be versioned and preserve per-message diagnostics.
+- Android backup v1 and raw chats.json compatibility are removed from desktop requirements.
+- Phase 3 retains SQLite, chat/message CRUD, settings persistence, History search/rename/delete/reopen and transactional import/export.
+- Added docs/PHASE3_DATA_CONTRACT.md as the implementation contract.
+- This entry records scope only; no database or UI implementation is claimed.
+
 ## 2026-11-12 — Initial repository setup
 
 - Confirmed the new public repository and its main default branch.
