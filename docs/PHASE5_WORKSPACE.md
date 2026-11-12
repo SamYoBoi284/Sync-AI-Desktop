@@ -28,7 +28,7 @@ Foreign keys on artifact source references use `ON DELETE SET NULL`. Deleting a 
 
 ## Workspace behavior
 
-Artifacts support the kinds `document`, `code`, `snippet`, `report` and `other`. The editor supports create, update, search and delete. List views load lightweight summaries; full artifact bodies are fetched only when an artifact is opened. Chat assistant messages expose a user-invoked “Save to Workspace” action; the user supplies the artifact title. Newly saved chat replies default to **not included** in future context.
+Artifacts support the kinds `document`, `code`, `snippet`, `report` and `other`. The editor supports create, update, search and delete. List views load lightweight summaries; full artifact bodies are fetched only when an artifact is opened. Chat assistant messages expose a user-invoked “Save to Workspace” action; the user supplies the artifact title. Newly saved chat replies default to **not included** in future context. Rust also verifies that a source message belongs to the supplied source conversation before saving provenance.
 
 Validation:
 - Artifact title: 1–200 characters.
@@ -42,7 +42,7 @@ Tasks support:
 - Status: `todo`, `in-progress`, `done`.
 - Priority: `low`, `normal`, `high`.
 - Optional due date in `YYYY-MM-DD` form.
-- Title maximum 200 characters; details maximum 128 KiB.
+- Title maximum 200 characters; details maximum 32 KiB.
 
 Notes support a title (maximum 200 characters), up to 2 MiB of content, pinning and a separate `include_in_context` flag. The list view loads note summaries; full note content is fetched only when selected. Pinning affects ordering; it does not automatically grant context access.
 
@@ -53,6 +53,8 @@ Tasks are not currently supplied to the language model. Notes are supplied only 
 Before each local generation, the chat path requests the context entries selected by the user. Only notes and Workspace artifacts with `include_in_context = 1` are eligible. The query returns at most 20 entries and the storage layer truncates the aggregate material to a maximum of 48 KiB.
 
 The prompt labels these entries as user-selected reference material and tells the model not to treat their contents as overriding instructions. This is a prompt-level boundary, not a guarantee that every local model will perfectly distinguish instructions from quoted data. The selected context remains local to the prompt and is not sent to a cloud service by this feature.
+
+The inference worker separately enforces its 2,048-token context and reserves 512 tokens for output, leaving at most roughly 1,528 prompt tokens. If the combined prompt is too long, the worker trims its oldest tokens. Because Workspace context precedes the current conversation in the prompt, excess Workspace material is dropped before the newest conversation turns. The 48 KiB limit is a storage/query ceiling, not a promise that every selected byte fits in the model context.
 
 ## File Library boundary
 
