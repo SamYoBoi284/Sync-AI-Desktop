@@ -212,35 +212,35 @@ Additional folders will be created as implementation boundaries are needed; do n
 
 ## 14. Validation status
 
-The scaffold, lifecycle slice and navigable desktop shell have been committed to GitHub and the source files have been retrieved for review. The project has not yet been built on Windows in this session. Dependency installation, npm typecheck/build, cargo check, Tauri development launch, single-instance forwarding, tray interactions, close-to-tray behavior and installer packaging are therefore unverified.
+The project has source implementations through Phase 5, but a full Windows validation pass has not been completed. GitHub source review and a separate SQLite smoke test do not establish that the frontend, Rust backend, native inference worker or complete Tauri application builds and runs.
 
+Outstanding checks include npm dependency installation, TypeScript/production build, Cargo formatting/check/tests, MSVC/libclang/llama.cpp compilation, clean and upgrade SQLite migration tests, Tauri IPC, tray/single-instance behavior, real GGUF loading, Job Object enforcement, Phase 5 UI persistence and end-to-end chat/workspace integration.
+
+A Python SQLite smoke test has checked the Phase 5 migration DDL, selected-context query, foreign-key nulling and task-status constraint. It is only a database SQL smoke test; Rust and Windows integration remain unverified.
 
 ## 15. Phase 4 delivery shape
 
-Phase 4 is intentionally limited to **three stages**, with no additional numbered sub-phases:
+Phase 4 remains exactly **three stages**:
 
-1. **Model management and resource budget:** GGUF import, hashing, deduplication, metadata, selection/removal, hardware RAM detection and an optional user-enabled managed inference RAM budget. This is an application-level allocation guard, not an OS-enforced hard process memory cap.
-2. **Native runtime and lifecycle:** Windows llama.cpp integration behind a narrow FFI, model load/unload, resource estimation, safe pre-load checks and clear runtime failures.
-3. **Chat inference connection:** streamed generation, queueing, cancellation, context handling and diagnostics attached to each assistant message.
+1. **Model management:** GGUF header validation, SHA-256 hashing, deduplication, original-path registry, missing-file detection, default selection and non-destructive removal.
+2. **Native runtime:** pinned llama.cpp CPU runtime inside a dedicated child worker; explicit load/unload; optional Windows Job Object private-commit ceiling; worker telemetry. The Tauri/WebView process stays outside the Job Object.
+3. **Chat inference connection:** SQLite-backed conversation context, streamed tokens, sequential queueing, cancellation and diagnostics attached to the exact assistant response.
 
-Workspace, File Library, Tasks & Notes and broader resource metrics move to Phase 5. This keeps Phase 4 broad enough to deliver a usable local chat loop without fragmenting it into micro-stages.
+The process memory ceiling includes model and session allocations. It is disabled by default; a cap that is too small can prevent model loading. Model-size estimates are informational.
 
+## 16. Phase 4 Stage 1 — model registry
 
-## 16. Phase 4 Stage 1 — model registry and resource budget
+New GGUF imports use the native file picker, validate GGUF metadata, hash the selected original file and register its canonical path. The model is not copied or moved. Duplicate hashes can relink an existing registry entry. Missing files are marked unavailable and checked again by Rust before load/default selection. Removing a model from Sync removes only its registry row and does not delete the source file. SQLite migration v3 preserves compatibility with legacy managed-copy records.
 
-The first Stage 1 implementation adds a SQLite v2 model registry, native GGUF file selection in Rust, managed application-data copies, SHA-256 duplicate detection, default-model selection and managed-file removal. The webview does not submit arbitrary filesystem paths to the import command. Host RAM detection reports installed and available memory. The Settings RAM Limiter toggle and budget are persisted in SQLite and default to disabled. Stage 1 does not yet enforce memory limits during model loading; resource estimation and pre-load refusal belong to Stage 2. This budget is not an OS-enforced process cap.
+## 17. Phase 4 Stage 2 and Stage 3 status
 
-
-## 17. Phase 4 Stage 2 runtime status
-
-- Native binding: llama_cpp = 0.3.2, exact version pin; the crate builds bundled llama.cpp and statically links by default. Its documented build prerequisites include libclang and a C/C++ toolchain.
-- Platform: CPU-only first pass. No GPU backend or GPU memory budget is enabled.
-- Lifecycle: explicit load/unload commands; a single active model; no model load during app startup; cannot remove a model while it is loading or active.
-- Session: fixed 2,048-token context, 128-token batch and 64-token physical micro-batch.
-- Safety: bounded GGUF metadata parsing; managed-path canonicalization; conservative pre-load RAM check; native llama.cpp session estimate and second available-memory check before context allocation.
-- RAM budget: enforced as an application-level inference guard for loads, not a hard OS process cap. It does not retroactively unload an active model.
-- Not part of Stage 2: chat generation, streaming, context assembly, queueing, cancellation and message diagnostics wiring. These remain Stage 3.
-- Validation: implementation source only. Windows C++ compile/link, Cargo check/test, frontend build and native runtime tests are pending.
+- Native binding: `llama_cpp = 0.3.2`, exact version pin; bundled llama.cpp requires the Windows C++ toolchain and LLVM/libclang.
+- Runtime: CPU-only, one loaded model, explicit load/unload and a 2,048-token context.
+- Worker: llama.cpp model/session ownership runs in a dedicated child process. On Windows, an optional Job Object committed-private-memory ceiling is assigned to the worker before model load. mmap is disabled so model weights contribute to worker private allocations.
+- Isolation: the Tauri/WebView UI process stays outside the worker Job Object. Runtime telemetry reports worker PID, configured ceiling, working set, private committed bytes and worker errors.
+- Stage 3: chat generation is source-connected to SQLite persistence, generic role-labelled context, streamed output, cancellation, sequential queueing and per-assistant-message diagnostics.
+- Deferred: model-specific GGUF chat templates, configurable sampling and automatic model loading.
+- Validation: frontend build, Cargo check/test, Windows native compilation, Job Object behavior, real model load and end-to-end chat remain pending.
 
 ## Phase 4 correction — isolated inference worker
 
@@ -250,7 +250,7 @@ llama.cpp model/session state now belongs to a dedicated child process launched 
 
 Runtime diagnostics expose the configured cap, worker PID, resident working set, private committed memory and the latest worker error. Working set and private commit are distinct values. The library's model memory estimate is informational and does not enforce the cap. The cap is disabled by default and changes apply on a subsequent model load.
 
-**Validation note:** these Phase 4 changes are committed as source only until checked on Windows. Cargo/API compatibility, frontend build, Job Object assignment/limit behavior, real GGUF loading and worker-failure recovery must still be tested. Stage 3 chat generation/streaming is not yet wired.
+**Validation note:** these Phase 4 changes are committed as source only until checked on Windows. Cargo/API compatibility, frontend build, Job Object assignment/limit behavior, real GGUF loading and worker-failure recovery must still be tested. Stage 3 chat generation/streaming is source-connected; Windows/native validation is pending.
 
 ## Phase 4 revision — isolated worker and chat connection
 
@@ -261,3 +261,16 @@ llama.cpp runs in a dedicated child process. Windows Job Objects apply an option
 The chat path now uses SQLite persistence, role-labelled context, streamed output, cancellation, sequential queueing and diagnostics on the exact assistant response. Queued assistant replies are inserted after their triggering user turns. Generic role-labelled prompts are used initially; model-specific GGUF chat-template rendering is not yet implemented.
 
 Validation remains pending: frontend build, Cargo check/test, Job Object behavior, native compilation, real model load, streaming/cancellation and Windows UI testing.
+
+
+## 18. Phase 5 — Workspace and productivity
+
+SQLite migration v4 adds `workspace_artifacts`, `tasks`, `notes` and `library_files`. Rust storage and Tauri commands back the Workspace editor, Tasks & Notes and File Library pages.
+
+Workspace supports artifact creation/search/edit/delete and saving assistant replies. Notes can be pinned and marked for context. Only artifacts and notes explicitly selected for context enter future local prompts, with a 20-entry and 48 KiB aggregate cap. Task data is not sent to the model.
+
+File Library uses a native file picker and stores a canonical original path, name/extension, size and SHA-256. It can detect missing paths and relink entries. Removal deletes only the registry row. The original file is not copied, moved or deleted, and the library does not read its content into chat. Any future AI-requested file operation belongs to Phase 6 and requires explicit one-time approval.
+
+The existing chat backup format v1 remains unchanged and does not yet include Phase 5 tables. See `docs/PHASE5_WORKSPACE.md` for data constraints, native command contracts and acceptance tests.
+
+Phase 5 source is committed but has not been built or runtime-tested on Windows. The separate SQLite smoke test does not validate Rust command wiring, frontend TypeScript or native picker behavior.
