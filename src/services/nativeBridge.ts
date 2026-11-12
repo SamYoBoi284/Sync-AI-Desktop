@@ -128,3 +128,11 @@ export function getSetting(key: string): Promise<string | null> {
 export function setSetting(key: string, valueJson: string): Promise<void> {
   return invoke<void>("set_setting", { key, valueJson });
 }
+
+export function appendMessage(chatId: string, message: { role: MessageRole; body: string; diagnostics?: MessageDiagnostics | null }): Promise<ChatMessage> {
+  return invoke<ChatMessage>("append_message", { chatId, message });
+}
+
+export function updateMessageDiagnostics(chatId: string, messageId: string, diagnostics: MessageDiagnostics): Promise<void> {
+  return invoke<void>("update_message_diagnostics", { chatId, messageId, diagnostics });
+}
