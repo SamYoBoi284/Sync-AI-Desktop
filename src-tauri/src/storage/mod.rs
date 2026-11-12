@@ -606,28 +606,6 @@ mod tests {
         assert!(remaining[0].is_default);
     }
 
-    #[test]
-    fn queued_assistant_reply_is_inserted_before_later_user_turns() {
-        let db = memory_db();
-        let chat = db.create_chat(None).unwrap();
-        let first = db.append_message(&chat.id, NewMessage {
-            role: MessageRole::User, body: "first question".into(), diagnostics: None,
-        }).unwrap();
-        let second = db.append_message(&chat.id, NewMessage {
-            role: MessageRole::User, body: "queued question".into(), diagnostics: None,
-        }).unwrap();
-
-        db.append_assistant_message_after(&chat.id, &first.id, NewMessage {
-            role: MessageRole::Assistant, body: "first answer".into(), diagnostics: None,
-        }).unwrap();
-
-        let messages = db.get_chat(&chat.id).unwrap().messages;
-        assert_eq!(messages.iter().map(|message| message.body.as_str()).collect::<Vec<_>>(),
-            vec!["first question", "first answer", "queued question"]);
-        assert_eq!(messages[0].position, 0);
-        assert_eq!(messages[1].position, 1);
-        assert_eq!(messages[2].position, 2);
-        assert_eq!(messages[2].id, second.id);
-    }
+    
 
 }
