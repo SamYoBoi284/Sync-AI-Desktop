@@ -1,6 +1,6 @@
 # Android-to-Desktop Port Specification
 
-> Status: source audit and implementation specification only. This document does not mean that any desktop feature has been implemented.
+> Status: Android source audit and desktop port specification. It records reference behavior and target design; implementation status for the desktop repository is tracked in CONTEXT_TRACKER.md.
 >
 > Android reference: SamYoBoi284/Sync-AI, branch feat/resource-manager-task-manager-17-10-2026.
 > Desktop target: SamYoBoi284/Sync-AI-Desktop, main.
