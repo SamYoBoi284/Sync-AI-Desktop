@@ -119,7 +119,7 @@ Chronological record of meaningful implementation sessions. Keep entries factual
 - Replaced the earlier generation-only RAM budget copy and stale model-load estimate gate with the hard worker-ceiling behavior. The pre-load model estimate is now informational only.
 - Updated settings to save the ceiling explicitly and clarified that a smaller limit may prevent a model from loading.
 - Validation: source changes authored and reviewed through GitHub API only. No npm build, Cargo check/test, Windows Job Object test, native compilation or actual GGUF load was run. Personal Windows device validation remains required.
-- Phase 4 remains exactly three stages. Stage 3 chat generation/streaming is still pending.
+- Phase 4 remains exactly three stages. At this checkpoint Stage 3 chat generation/streaming was still pending; it was connected in the following Phase 4 source implementation entry below.
 
 ## 2026-11-11 — Phase 4 source implementation
 
