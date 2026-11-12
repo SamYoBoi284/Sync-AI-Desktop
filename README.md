@@ -22,6 +22,8 @@ The frontend recreates and adapts the Android application's visual language and 
 
 **Phase 2.2 sidebar refinement source committed.** The app has a navigable desktop shell, a New chat landing view, a Runtime view, and clearly-labelled preview screens. Startup splash, single-instance handling and tray lifecycle source are committed but have not been compiled or runtime-tested on Windows.
 
+The sidebar now includes searchable recent conversations sourced from SQLite History, workspace/system navigation and a dedicated Settings destination. Settings controls are staged and are not presented as implemented.
+
 The New chat composer remains intentionally disabled until local inference is connected. Chat storage and History source are implemented in Phase 3; Windows runtime validation remains pending.
 
 **Phase 3 implementation source is committed.** The repository now contains the SQLite storage layer, typed Rust commands, per-message diagnostics data model, desktop backup validation/round-trip tests, and a connected History UI with search, rename, delete, import and export source. These changes have not been built or runtime-tested yet. Android backup compatibility is explicitly out of scope.
@@ -35,6 +37,16 @@ Not implemented yet:
 - File Library or Tasks & Notes functionality
 - Voice, camera or recorder features
 - Host-computer tools or approval execution
+
+## Next milestone: Phase 4 local model engine
+
+Phase 4 is deliberately organized into **three stages only**:
+
+1. Model management: GGUF import, hashing, deduplication, metadata, selection/removal, hardware RAM detection and an optional user-enabled managed inference RAM budget.
+2. Native runtime: Windows llama.cpp integration, model load/unload, memory estimates and pre-load safeguards.
+3. Chat inference: streaming, queueing, cancellation, context handling and diagnostics attached to each assistant message.
+
+The optional RAM budget will initially be an application-level inference allocation guard, not a claim of an OS-enforced hard process memory cap. Workspace, File Library, Tasks & Notes and broader resource metrics remain in Phase 5.
 
 ## Run locally on Windows
 
