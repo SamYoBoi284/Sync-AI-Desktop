@@ -407,7 +407,7 @@ Recommended first useful desktop slice:
 1. Tauri shell and React/TypeScript app.
 2. Desktop navigation and the main chat layout.
 3. Sync Core visualizer and appearance tokens.
-4. Chat persistence and Android backup import/export.
+4. Chat persistence, per-message diagnostics and desktop-native versioned backup import/export.
 5. GGUF model registry and lifecycle.
 6. Native llama.cpp proof of concept, then streamed inference.
 
