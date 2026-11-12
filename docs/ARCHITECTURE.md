@@ -168,7 +168,7 @@ Created in the repository:
 - No shell, filesystem, process, opener or other plugin surface.
 - Tauri bundling disabled until icon assets and installer decisions are ready.
 
-The app metadata and splash-gate commands do not inspect user files or perform privileged operations. Sidebar navigation, SQLite History, Local Models and Settings are source-connected. Stage 2 adds the native model/context lifecycle, but chat generation remains intentionally disconnected until Stage 3.
+The app metadata and splash-gate commands do not inspect user files or perform privileged operations. Sidebar navigation, SQLite History, Local Models, Runtime, Workspace, Tasks & Notes and File Library are source-connected. Phase 4 Stage 3 chat generation is source-connected; Phase 5 adds bounded opt-in context from selected Workspace artifacts and notes. Full application validation remains pending.
 
 ## 12. Current code organization
 
