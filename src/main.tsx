@@ -34,3 +34,7 @@ async function bootstrap() {
 }
 
 void bootstrap();
+
+import "./workspace.css";
+import "./tasks-notes.css";
+import "./library.css";
