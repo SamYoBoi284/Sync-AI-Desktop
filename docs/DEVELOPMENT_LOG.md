@@ -71,4 +71,4 @@ Chronological record of meaningful implementation sessions. Keep entries factual
 - Added Rust unit tests for migration, diagnostics persistence, backup round-trip, duplicate-chat skipping, invalid diagnostics roles and duplicate IDs in a backup.
 - Added a History UI with search, create, open, rename, delete, diagnostics disclosure, backup import and backup export.
 - Marked History as an active navigation destination. Android backup compatibility remains explicitly out of scope.
-- Validation: source committed and key files fetched back from GitHub. The execution environment has Node.js 22.16.0/npm 10.9.2 but no Rust/Cargo; dependencies cannot be installed here. No TypeScript build, Cargo test/check or Windows runtime test is claimed.
+- Validation: source committed and key files fetched back from GitHub. The SQLite DDL, core list query, diagnostics constraint and cascade behavior were smoke-tested separately with Python sqlite3. The execution environment has Node.js 22.16.0/npm 10.9.2 but no Rust/Cargo; dependencies cannot be installed here. No TypeScript build, Cargo test/check or Windows runtime test is claimed.
