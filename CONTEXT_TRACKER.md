@@ -127,7 +127,7 @@ The wider source tree includes File Library, tasks/notes, recorder, camera, voic
 - Android UI is built programmatically in Java, not XML or Jetpack Compose.
 - Main chat persists user messages before inference; queues later messages while generation is active; streams tokens; supports cancellation, completion and errors.
 - Send becomes Stop only while generation is active and the composer is empty.
-- Chat backup uses format sync-ai-chat-backup version 1; raw chats.json arrays are also accepted. Import stages validation and skips existing IDs rather than overwriting.
+- Android reference behavior: its ChatStore uses sync-ai-chat-backup v1 and accepts raw chats.json arrays. Desktop intentionally uses a separate format.
 - ModelManager copies model imports, computes SHA-256, deduplicates by hash, and stores model metadata.
 - GgufModelBackend actually loads GGUF only; other recognized extensions are rejected for inference.
 - Android native llama.cpp is pinned at revision 4a89937 and uses JNI/Android-specific code. Do not copy its JNI/CMake integration to Windows.
