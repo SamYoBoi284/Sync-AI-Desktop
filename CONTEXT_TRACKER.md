@@ -76,8 +76,8 @@ The assistant-side environment previously had Node.js 22.16.0/npm 10.9.2 but no 
 | Frontend | React + TypeScript | **Approved by user on 2026-11-12** |
 | Frontend build tool | Vite | Selected |
 | Package manager | npm | Selected |
-| Inference | llama_cpp Rust bindings + bundled llama.cpp + GGUF | Stage 2 source committed; native build pending |
-| Persistence | SQLite | Schema v1 and storage source committed; build/runtime validation pending |
+| Inference | llama_cpp Rust bindings + bundled llama.cpp + GGUF | Phase 4 three-stage source committed; native build pending |
+| Persistence | SQLite | Schema v1–v4 and chat/Phase 5 storage source committed; build/runtime validation pending |
 | Config | Local structured settings | Implementation choice open |
 | Platform | Windows x64 first | Agreed |
 
@@ -200,11 +200,11 @@ Tauri capabilities are an additional boundary, not a replacement for per-operati
 
 1. Phase 0 — Repository foundation and source-to-desktop spec. Complete.
 2. Phase 1 — Tauri 2 + React + TypeScript + Vite scaffold and minimal metadata IPC command. Source committed; builds not yet verified.
-3. Phase 2 — Desktop shell, startup/tray lifecycle, sidebar, chat UI, Sync Core, themes and settings. Startup/tray lifecycle and navigable shell source are implemented; chat services and Windows validation are pending.
-4. Phase 3 — SQLite schema/migrations, chat/message CRUD, per-assistant-message diagnostics, History CRUD/search, and versioned desktop-native chat backup import/export.
-5. Phase 4 — GGUF manager and minimal Windows llama.cpp FFI proof of concept.
-6. Phase 5 — Streamed local inference, Workspace, File Library, Tasks & Notes and resource metrics.
-7. Phase 6 — Tool registry, one-time approval broker, Windows validation and security test suite.
+3. Phase 2 — Desktop shell, startup/tray lifecycle, sidebar, recent chats and settings foundation. Source committed; Windows validation pending.
+4. Phase 3 — SQLite chat/message persistence, per-assistant-message diagnostics, History and versioned desktop chat backup. Source committed; Windows validation pending.
+5. Phase 4 — Exactly three stages: GGUF model management, isolated llama.cpp worker with Job Object memory ceiling, then streaming chat connection. Source committed; native/Windows validation pending.
+6. Phase 5 — Workspace artifacts, Tasks & Notes, File Library and explicit opt-in Workspace context. Source committed; frontend/native/Windows validation pending.
+7. Phase 6 — Tool registry, one-time approval broker, Windows adapters and security test suite.
 8. Phase 7 — Voice/recording, packaging, clean-machine test and security review.
 
 Do not implement computer-control tools before the approval model and its tests exist.
@@ -246,14 +246,16 @@ Do not implement computer-control tools before the approval model and its tests 
 
 ## 13. Exact next step
 
-Continue Phase 3 validation and hardening:
-1. Run npm install and npm run build on the personal Windows development machine.
-2. Run cargo test and cargo check from src-tauri.
-3. Launch with npm run tauri dev and verify database creation, History CRUD/search, diagnostics display, backup export/import and duplicate handling.
-4. Fix compile/runtime issues found by those checks before moving to Phase 4.
-3. Add theme and appearance controls.
-4. Once the inference interface exists, connect chat generation to the Rust runtime.
-5. Run TypeScript, Rust and Windows lifecycle validation on the user's personal Windows development machine. Do not use the work PC.
+Validate the Phase 0–5 source on the personal Windows development laptop before starting Phase 6:
+
+1. Pull the latest `main` into the existing personal clone.
+2. Install npm dependencies and run `npm run build`.
+3. Run `cargo fmt --check`, `cargo check --manifest-path src-tauri/Cargo.toml` and `cargo test --manifest-path src-tauri/Cargo.toml`.
+4. Launch Tauri and verify startup/tray lifecycle, existing database migration to v4, History, model import/load and chat streaming.
+5. Verify Workspace artifact CRUD, save assistant reply, Tasks & Notes persistence, File Library path/hash/relink/remove and the opt-in context boundary.
+6. Fix build/runtime defects found before beginning Phase 6.
+
+Do not clone or build on the work PC. The user explicitly reserves build/test work for the personal laptop.
 
 
 
@@ -404,7 +406,7 @@ Stage 2 source is committed to main. It adds:
 
 The RAM Limiter remains an application-level inference allocation guard, not a guaranteed process-wide memory ceiling. Estimates are conservative estimates, not measured resident memory. GPU offload and configurable context sizing are not part of this first runtime slice.
 
-**Validation:** source has been committed and fetched back from GitHub for inspection. No npm build, Cargo check/test, C++ compile/link, real-model load, or Windows runtime test was run in this environment. The actual Windows development machine must perform those checks. Stage 3 chat generation/streaming is not started.
+**Validation:** source has been committed and fetched back from GitHub for inspection. No npm build, Cargo check/test, C++ compile/link, real-model load, or Windows runtime test was run in this environment. Stage 3 source implementation is tracked in the later Phase 4 revised source status.
 
 ## Phase 4 correction — original-path library and isolated hard-capped worker
 
@@ -429,7 +431,7 @@ This entry supersedes earlier Phase 4 text above wherever it describes model-cop
 - Working-set memory and private commit are different measurements. File-backed mapped pages are not the same as private committed memory; the revised worker disables mmap for model weights to make the selected hard ceiling meaningful for those allocations.
 - The model estimate is not a hard physical-RAM forecast. It is display-only.
 - Startup auto-load, Windows sign-in launch, multimodal support and a separate Device Assist Model category remain deferred.
-- Phase 4 still has exactly three stages. Stages 1 and 2 have source changes in this revision; Stage 3 chat generation/streaming is not implemented yet.
+- Phase 4 remains exactly three stages. All three have source implementations committed: model management, isolated worker/runtime, and streaming chat connection. Windows/native validation is pending.
 - Validation remains pending: no npm build, Cargo check/test, Windows Job Object integration test, native llama.cpp build, actual model load or UI runtime test has been performed in this environment. Use the existing personal Windows laptop, never the work PC.
 
 ## Phase 4 revised source status — all three stages
