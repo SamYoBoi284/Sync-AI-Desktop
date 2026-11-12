@@ -5,6 +5,7 @@ import App from "./App";
 import { consumeStartupSplash } from "./services/nativeBridge";
 import "./styles.css";
 import "./shell.css";
+import "./history.css";
 
 const rootElement = document.getElementById("root");
 
