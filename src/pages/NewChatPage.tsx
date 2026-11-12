@@ -29,7 +29,7 @@ function buildPrompt(messages: ChatMessage[], workspaceContext: WorkspaceContext
     .map(message => (message.role === "user" ? "User" : "Assistant") + ":\n" + message.body.trim())
     .join("\n\n");
   const workspaceBlock = workspaceContext.length
-    ? workspaceContext.map(entry => "[" + entry.kind.toUpperCase() + "] " + entry.title + "\\n" + entry.content).join("\\n\\n")
+    ? workspaceContext.map(entry => "[" + entry.kind.toUpperCase() + "] " + entry.title + "\n" + entry.content).join("\n\n")
     : "No Workspace material has been selected for context.";
 
   return [
@@ -45,7 +45,7 @@ function buildPrompt(messages: ChatMessage[], workspaceContext: WorkspaceContext
     turns,
     "",
     "Assistant:",
-  ].join("\\n");
+  ].join("\n");
 }
 
 function formatElapsed(value?: number | null): string {
@@ -332,8 +332,8 @@ export function NewChatPage({ initialChatId, onNavigate, onNewChat }: NewChatPag
   const [savingArtifactId, setSavingArtifactId] = useState<string | null>(null);
 
   async function saveAssistantReply(message: ChatMessage) {
-    const firstLine = message.body.split("\\n").map(line => line.trim()).find(Boolean) ?? "Saved response";
-    const defaultTitle = firstLine.replace(/^#+\\s*/, "").slice(0, 64);
+    const firstLine = message.body.split("\n").map(line => line.trim()).find(Boolean) ?? "Saved response";
+    const defaultTitle = firstLine.replace(/^#+\s*/, "").slice(0, 64);
     const title = window.prompt("Save this response to Workspace", defaultTitle);
     if (title === null || !title.trim()) return;
     setSavingArtifactId(message.id);
