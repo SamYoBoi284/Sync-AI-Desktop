@@ -27,7 +27,7 @@
 - The main-window capability contains core:default only.
 - No shell, filesystem, process or opener plugin is added.
 - The frontend distinguishes the native bridge from browser preview.
-- Sidebar navigation is functional in the frontend; feature pages accurately identify services that are not implemented.
+- Sidebar navigation is functional; History now has a source-implemented local chat interface, while other unimplemented feature destinations remain clearly labelled previews.
 - Rust registers the Tauri single-instance plugin first and restores/focuses the existing main window on subsequent process launches.
 - Rust owns an atomic startup-splash gate consumed once per process.
 - A native tray menu provides Open, Hide and Exit; left-click restores where supported.
@@ -50,7 +50,7 @@
 - Workspace, File Library, Tasks & Notes or voice
 - Permission/approval UI or enforcement
 - Windows tools/system adapters
-- Automated tests, CI, installer, app icons or packaging
+- Frontend automated tests, CI, installer, app icons or packaging (Rust unit test source exists but has not been run)
 
 ### Validation environment check
 
