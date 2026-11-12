@@ -92,17 +92,28 @@ export function TasksNotesPage() {
 
   async function changeTask(task: TaskRecord, patch: Partial<TaskInput>) {
     try {
-      await updateTask(task.id, {
+      const updated = await updateTask(task.id, {
         title: task.title, details: task.details, status: task.status,
         priority: task.priority, dueDate: task.dueDate, ...patch,
       });
+      if (editingTaskId === task.id) {
+        setTaskDraft(current => ({ ...current, status: updated.status }));
+      }
       await refreshTasks();
     } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
   }
 
   async function removeTask(task: TaskRecord) {
     if (!window.confirm("Delete task “" + task.title + "”?")) return;
-    try { await deleteTask(task.id); await refreshTasks(); setNotice("Task deleted."); }
+    try {
+      await deleteTask(task.id);
+      if (editingTaskId === task.id) {
+        setEditingTaskId(null);
+        setTaskDraft(blankTask());
+      }
+      await refreshTasks();
+      setNotice("Task deleted.");
+    }
     catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
   }
 
