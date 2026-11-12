@@ -14,8 +14,8 @@
 
 ## 2. Current status
 
-**Phase:** 4 — local model engine, Stage 1 source committed; validation pending  
-**Status:** SQLite schema/migrations v1-v2, Rust chat/message/settings/model-registry commands, per-assistant-message diagnostics persistence, versioned desktop backup validation/import/export, and a connected History UI are committed to main. Android backup compatibility is out of scope. No frontend build, Cargo test/check or Windows runtime test has been run.
+**Phase:** 4 — local model engine, Stage 2 source committed; native build/runtime validation pending  
+**Status:** SQLite schema/migrations v1-v2, Rust chat/message/settings/model-registry commands, per-assistant-message diagnostics persistence, versioned desktop backup validation/import/export, and a connected History UI are committed to main. Stage 2 adds GGUF metadata parsing, a pinned llama.cpp Rust wrapper, CPU model/context loading and unloading, pre-load memory estimates, and RAM-budget enforcement source. Android backup compatibility is out of scope. No frontend build, Cargo test/check or Windows runtime test has been run.
 
 ### Verified in this repository
 
@@ -29,12 +29,14 @@
 - The frontend distinguishes the native bridge from browser preview.
 - Sidebar navigation and SQLite-backed recent chats are source-implemented. History and Local Models have functional source interfaces; remaining unimplemented destinations are clearly labelled previews.
 - Phase 4 Stage 1 source adds a GGUF registry, native file-picker import, SHA-256 verification/deduplication, managed model storage, default selection/removal and host RAM detection.
-- Settings contains an optional RAM Limiter toggle and budget slider persisted through SQLite. It is off by default; Stage 2 still needs to enforce the budget during model loading.
+- Settings contains an optional RAM Limiter toggle and budget slider persisted through SQLite. It is off by default; Stage 2 checks the estimated inference footprint against this budget before model loading and checks the native context estimate again before allocating the session. This is not an OS-enforced hard process cap.
 - Rust registers the Tauri single-instance plugin first and restores/focuses the existing main window on subsequent process launches.
 - Rust owns an atomic startup-splash gate consumed once per process.
 - A native tray menu provides Open, Hide and Exit; left-click restores where supported.
 - Closing the main window hides it instead of terminating the process.
 - Key scaffold files and updated branch head were fetched back from GitHub.
+- Stage 2 adds a bounded GGUF v2/v3 header parser, architecture/model name/quantization extraction, conservative KV/context/batch memory estimation, a pinned llama_cpp 0.3.2 native wrapper, CPU-only manual load/unload, and native session resource estimation.
+- The Local Models page now exposes model metadata, memory inspection, load and unload actions. Model removal is rejected while that model is loading or active. App startup does not load a model.
 
 ### Not yet implemented or verified
 
@@ -47,8 +49,9 @@
 - Local SQLite runtime/build validation and end-to-end Tauri IPC tests
 - Chat generation, streaming, queueing and cancellation
 - End-to-end backup file dialog/download testing on Windows
-- llama.cpp Windows integration, model loading/unloading and inference
-- llama.cpp Windows build/integration
+- Actual Windows compilation/linking of llama_cpp/llama.cpp and C++ dependencies
+- Runtime verification with real GGUF files, model load/unload, memory refusal and repeated lifecycle
+- Stage 3 chat generation, streaming, queueing, cancellation, context assembly and diagnostics connection
 - Workspace, File Library, Tasks & Notes or voice
 - Permission/approval UI or enforcement
 - Windows tools/system adapters
@@ -86,14 +89,14 @@
 | Frontend | React + TypeScript | **Approved by user on 2026-11-12** |
 | Frontend build tool | Vite | Selected |
 | Package manager | npm | Selected |
-| Inference | llama.cpp + GGUF | Agreed direction |
+| Inference | llama_cpp Rust bindings + bundled llama.cpp + GGUF | Stage 2 source committed; native build pending |
 | Persistence | SQLite | Schema v1 and storage source committed; build/runtime validation pending |
 | Config | Local structured settings | Implementation choice open |
 | Platform | Windows x64 first | Agreed |
 
 The Tauri-maintained create-tauri-app project includes a React TypeScript template. Tauri's frontend documentation recommends Vite for SPA frameworks. The starter uses React 19, TypeScript 6 and Vite 8 dependency ranges from the maintained React-TS template. Dependency installation is not yet verified.
 
-Windows dev prerequisites to check on the actual build machine: Rust stable MSVC (at least 1.90 for the current single-instance plugin release), Microsoft C++ Build Tools (Desktop development with C++), WebView2, and a Node.js version compatible with the selected Vite release. WebView2 is included on many Windows 10 version 1803+ installations, but the local machine still needs verification.
+Windows dev prerequisites to check on the actual build machine: Rust stable MSVC (at least 1.90 for the current single-instance plugin release), Microsoft C++ Build Tools (Desktop development with C++), LLVM/libclang for the native binding build, WebView2, and a Node.js version compatible with the selected Vite release. WebView2 is included on many Windows 10 version 1803+ installations, but the local machine still needs verification.
 
 ## 5. Android source audit baseline
 
@@ -148,7 +151,7 @@ Key desktop decisions:
 - Preserve conversation queue, streaming and cancellation; use a desktop-native, versioned chat backup format. Android backup compatibility is not required.
 - Preserve six themes, light/dark/system mode, eight independent accents and motion settings.
 - GGUF-only loadable model manager for MVP; import/hash/deduplicate/metadata lifecycle.
-- Build llama.cpp for Windows behind an opaque-handle C ABI or safe Rust FFI. Exact mechanism requires a proof-of-concept spike.
+- Use the pinned high-level llama_cpp 0.3.2 Rust wrapper, which builds its bundled llama.cpp and statically links the native libraries by default. Keep model/context operations behind narrow Rust commands. Stage 2 initially targets CPU-only model loading; native build and Windows runtime proof remain pending.
 - Defer Android-specific camera, calls, contacts, intents, wake-word services, SpeechRecognizer/TTS and media intents until desktop-specific designs exist.
 
 ## 7. Phase 1 scaffold inventory
@@ -184,7 +187,7 @@ Tauri packaging is disabled pending an app icon and installer configuration. No 
 Frontend: React + TypeScript + Vite.  
 Desktop shell: Tauri 2.  
 Backend: Rust typed commands, services, validation, storage, model lifecycle and tool broker.  
-Native inference: llama.cpp built for Windows behind a narrow FFI.  
+Native inference: pinned llama_cpp 0.3.2 high-level Rust bindings with bundled llama.cpp; Stage 2 source uses CPU-only model and context lifecycle.  
 Storage: SQLite planned for conversations, messages, preferences, model metadata and Workspace artifacts.  
 Local models: user-managed GGUF files, excluded from Git.  
 Security boundary: explicit one-time approval UI plus backend validation and narrow Windows adapters.
@@ -398,3 +401,20 @@ Workspace, File Library, Tasks & Notes and broader resource metrics remain Phase
 - Important: Stage 1 stores the inference budget preference and presents hardware readings. It does not yet enforce model-load memory allocation. Pre-load enforcement and model resource estimation are Stage 2 work; this is not a hard OS process cap.
 - Local Models page supports importing GGUF files, SHA-256 duplicate detection, setting a default and removing managed model files. Architecture/quantization remain unknown until GGUF metadata parsing is implemented.
 - Validation: source committed only. Rust/Cargo, npm build and Windows runtime not run. Native picker and sysinfo APIs require validation on the user's personal Windows development machine.
+
+
+## 17. Phase 4 Stage 2 — native runtime and lifecycle
+
+Stage 2 source is committed to main. It adds:
+
+- A bounded GGUF v2/v3 metadata-header parser. It reads model architecture, display name, general file type/quantization and architecture-specific dimensions needed for a context estimate. It does not read tensor payloads.
+- Model imports now validate GGUF headers before copying, persist metadata in the existing SQLite v2 columns and refresh metadata for earlier Stage 1 imports.
+- Pinned llama_cpp 0.3.2 high-level Rust bindings. The crate builds its bundled llama.cpp source and statically links the native libraries by default. Windows builds require a C/C++ toolchain and libclang.
+- A CPU-only runtime manager with explicit manual model load/unload, one model active at a time, a 2,048-token context and 128-token batch. Startup never auto-loads a multi-GB model.
+- GGUF-based pre-load memory estimation, current-available-RAM checks with a system reserve, and a second check using llama.cpp's native session-size estimate before allocating the context.
+- Model removal is blocked while that model is loading or active; paths are canonicalized and confined to the managed models directory.
+- Local Models UI now displays metadata, estimates and runtime status with manual Load/Unload actions. Settings explains that the RAM budget applies to new loads and does not retroactively unload a running model.
+
+The RAM Limiter remains an application-level inference allocation guard, not a guaranteed process-wide memory ceiling. Estimates are conservative estimates, not measured resident memory. GPU offload and configurable context sizing are not part of this first runtime slice.
+
+**Validation:** source has been committed and fetched back from GitHub for inspection. No npm build, Cargo check/test, C++ compile/link, real-model load, or Windows runtime test was run in this environment. The actual Windows development machine must perform those checks. Stage 3 chat generation/streaming is not started.

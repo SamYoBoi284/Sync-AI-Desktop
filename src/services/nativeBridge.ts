@@ -146,3 +146,44 @@ export function listModels(): Promise<ModelRecord[]> { return invoke<ModelRecord
 export function importGguf(): Promise<ModelImportResult | null> { return invoke<ModelImportResult | null>("import_gguf"); }
 export function setDefaultModel(modelId: string): Promise<void> { return invoke<void>("set_default_model", { modelId }); }
 export function removeModel(modelId: string): Promise<void> { return invoke<void>("remove_model", { modelId }); }
+
+export interface RuntimeStatus {
+  isLoading: boolean;
+  isLoaded: boolean;
+  loadingModelId: string | null;
+  loadedModelId: string | null;
+  loadedModelName: string | null;
+  loadedAt: string | null;
+  estimatedMemoryBytes: number | null;
+  contextLength: number | null;
+  batchSize: number | null;
+  backend: string;
+}
+
+export interface ModelResourceEstimate {
+  modelSizeBytes: number;
+  estimatedPeakBytes: number;
+  availableRamBytes: number;
+  configuredBudgetBytes: number | null;
+  contextLength: number;
+  batchSize: number;
+  fitsConfiguredBudget: boolean;
+  fitsCurrentAvailability: boolean;
+  estimateKind: string;
+}
+
+export function getRuntimeStatus(): Promise<RuntimeStatus> {
+  return invoke<RuntimeStatus>("get_runtime_status");
+}
+
+export function estimateModelResources(modelId: string): Promise<ModelResourceEstimate> {
+  return invoke<ModelResourceEstimate>("estimate_model_resources", { modelId });
+}
+
+export function loadModel(modelId: string): Promise<RuntimeStatus> {
+  return invoke<RuntimeStatus>("load_model", { modelId });
+}
+
+export function unloadModel(): Promise<RuntimeStatus> {
+  return invoke<RuntimeStatus>("unload_model");
+}

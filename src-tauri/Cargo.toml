@@ -21,6 +21,8 @@ rusqlite = { version = "0.37", features = ["bundled"] }
 rfd = "0.15"
 sha2 = "0.10"
 sysinfo = "0.33"
+# Pinned high-level Rust bindings; the crate builds its bundled llama.cpp source.
+llama_cpp = "=0.3.2"
 tauri = { version = "2", features = ["tray-icon"] }
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]

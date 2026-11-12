@@ -90,7 +90,7 @@ function App({ showStartupSplash }: AppProps) {
             )}
             <footer className="shell-page-footer">
               <span>SYNC AI DESKTOP · WINDOWS FOUNDATION</span>
-              <span>LOCAL INFERENCE NOT CONNECTED</span>
+              <span>CHAT INFERENCE NOT CONNECTED</span>
             </footer>
           </div>
         </main>

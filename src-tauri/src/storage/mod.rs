@@ -184,6 +184,16 @@ impl Database {
                 imported_at: row.get(7)?, is_default: row.get::<_, i64>(8)? != 0,
             })).optional().map_err(db_error)
     }
+    pub fn update_model_metadata(&self, model_id: &str, architecture: Option<String>, quantization: Option<String>) -> Result<(), String> {
+        let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
+        let changed = connection.execute(
+            "UPDATE models SET architecture = ?1, quantization = ?2 WHERE id = ?3",
+            params![architecture, quantization, model_id],
+        ).map_err(db_error)?;
+        if changed == 0 { return Err("Model not found".into()); }
+        Ok(())
+    }
+
     pub fn register_model(&self, model: &ModelRecord, relative_path: &str) -> Result<(), String> {
         let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
         let exists: bool = connection.query_row("SELECT EXISTS(SELECT 1 FROM models)", [], |r| r.get(0)).map_err(db_error)?;

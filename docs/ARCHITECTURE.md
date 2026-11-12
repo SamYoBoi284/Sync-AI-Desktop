@@ -74,19 +74,15 @@ The frontend is not a security boundary. Rust independently validates every oper
 
 The Android app uses llama.cpp pinned at revision 4a89937 through JNI. Its native code has Android-specific dependencies and must not be reused as the desktop boundary.
 
-Desktop should compile llama.cpp for Windows and expose a narrow, stable interface to Rust. Use opaque handles and explicit load/unload/generate/cancel/diagnostics operations. Token streaming must have clear callback lifetime and cancellation rules. Do not allow C++ exceptions, Rust panics or invalid pointers to cross the FFI boundary.
+Desktop uses the pinned high-level Rust crate llama_cpp = 0.3.2. It builds its bundled llama.cpp source and statically links the native libraries by default. The wrapper provides GGUF model loading, context/session creation and native session-size estimation. The first runtime is CPU-only (n_gpu_layers = 0) and keeps a single model/context active.
 
-Before integrating inference into chat, build a minimal Windows proof of concept and verify load, streamed generation, cancellation, unload and repeated lifecycle.
+Stage 2 source adds a bounded GGUF v2/v3 header parser, metadata extraction, a runtime manager, manual load/unload commands, a fixed 2,048-token context, a 128-token batch and pre-load resource checks. The managed RAM budget is compared against a conservative GGUF-based estimate before model weights are loaded. After loading model weights, llama.cpp's own session-size estimate is checked against the configured budget and current available RAM before the context session is allocated. Failures release temporary native allocations.
 
-The exact C ABI / Rust FFI wrapper mechanism remains an implementation spike.
+The GGUF estimates are estimates, not an OS-enforced cap or measured resident-memory values. The runtime must not auto-load at application startup. Chat generation, streamed tokens, stop/cancel and session/context assembly remain Stage 3 work. Windows C++ compilation, linking and actual GGUF load tests remain pending.
 
 ## 6. Storage
 
-Planned SQLite data:
-- Chats and ordered messages.
-- Preferences and application settings.
-- Model registry metadata.
-- Workspace artifacts and their generation state.
+SQLite data currently includes chats, ordered messages, app settings and the GGUF model registry. Workspace artifacts and their generation state remain future storage work. The existing v2 model columns store architecture and quantization metadata; no new migration was required for Stage 2.
 
 Use schema migrations, foreign keys and transactions for multi-row changes. Keep GGUF model files external to the repository. Keep user data, local databases, prompts, model contents and secrets out of Git.
 
@@ -172,7 +168,7 @@ Created in the repository:
 - No shell, filesystem, process, opener or other plugin surface.
 - Tauri bundling disabled until icon assets and installer decisions are ready.
 
-The metadata and splash-gate commands do not inspect user files or perform privileged operations. Sidebar navigation and recent-chat routing are implemented in source. Settings is a staged destination; individual preference controls are not yet connected. Feature pages do not claim that their storage, inference or OS services are connected.
+The app metadata and splash-gate commands do not inspect user files or perform privileged operations. Sidebar navigation, SQLite History, Local Models and Settings are source-connected. Stage 2 adds the native model/context lifecycle, but chat generation remains intentionally disconnected until Stage 3.
 
 ## 12. Current code organization
 
@@ -207,8 +203,7 @@ Additional folders will be created as implementation boundaries are needed; do n
 
 ## 13. Open implementation decisions
 
-- SQLite migration hardening, rollback tests and Windows runtime validation.
-- llama.cpp build configuration and FFI wrapper.
+- Windows C++/libclang toolchain setup, Cargo compilation and llama.cpp runtime validation.
 - Minimum supported Windows version and CPU baseline.
 - Scoped file access model and import strategy.
 - Windows voice recognition and TTS engines.
@@ -234,3 +229,15 @@ Workspace, File Library, Tasks & Notes and broader resource metrics move to Phas
 ## 16. Phase 4 Stage 1 — model registry and resource budget
 
 The first Stage 1 implementation adds a SQLite v2 model registry, native GGUF file selection in Rust, managed application-data copies, SHA-256 duplicate detection, default-model selection and managed-file removal. The webview does not submit arbitrary filesystem paths to the import command. Host RAM detection reports installed and available memory. The Settings RAM Limiter toggle and budget are persisted in SQLite and default to disabled. Stage 1 does not yet enforce memory limits during model loading; resource estimation and pre-load refusal belong to Stage 2. This budget is not an OS-enforced process cap.
+
+
+## 17. Phase 4 Stage 2 runtime status
+
+- Native binding: llama_cpp = 0.3.2, exact version pin; the crate builds bundled llama.cpp and statically links by default. Its documented build prerequisites include libclang and a C/C++ toolchain.
+- Platform: CPU-only first pass. No GPU backend or GPU memory budget is enabled.
+- Lifecycle: explicit load/unload commands; a single active model; no model load during app startup; cannot remove a model while it is loading or active.
+- Session: fixed 2,048-token context, 128-token batch and 64-token physical micro-batch.
+- Safety: bounded GGUF metadata parsing; managed-path canonicalization; conservative pre-load RAM check; native llama.cpp session estimate and second available-memory check before context allocation.
+- RAM budget: enforced as an application-level inference guard for loads, not a hard OS process cap. It does not retroactively unload an active model.
+- Not part of Stage 2: chat generation, streaming, context assembly, queueing, cancellation and message diagnostics wiring. These remain Stage 3.
+- Validation: implementation source only. Windows C++ compile/link, Cargo check/test, frontend build and native runtime tests are pending.

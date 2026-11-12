@@ -93,3 +93,16 @@ Chronological record of meaningful implementation sessions. Keep entries factual
 - Kept Stage 1 honest about its boundary: the RAM budget is not yet enforced during model loading. Memory estimation and pre-load enforcement belong to Stage 2.
 - No arbitrary filesystem path is accepted from the webview for model import; Rust opens the native picker itself.
 - Validation: source committed only. No npm build, Cargo check/test or Windows runtime test run.
+
+
+## 2026-11-12 — Phase 4 Stage 2: GGUF metadata and native model lifecycle
+
+- Added a bounded GGUF v2/v3 metadata parser for architecture, model name, general file type/quantization and dimensions used in memory estimates.
+- Changed model import to validate the GGUF header and persist metadata in the existing SQLite v2 model columns; existing imports are metadata-refreshed when the library is opened.
+- Added pinned llama_cpp = 0.3.2 Rust bindings, which build bundled llama.cpp and statically link by default.
+- Added a CPU-only runtime manager and typed commands for runtime status, model load, model unload and resource estimation. The model is loaded only by explicit user action and is never auto-loaded on startup.
+- Added 2,048-token context/128-token batch session setup, conservative metadata-based memory estimation, currently available RAM reserve checks, and a second pre-session check using llama.cpp's native session-size estimate.
+- Blocked model deletion while that model is loading or active and canonicalized model paths inside the managed model directory.
+- Updated Local Models and Settings with metadata, memory inspection, Load/Unload and RAM enforcement behavior.
+- Validation: source changes committed for review only. No npm build, Cargo check/test, C++ compile/link, actual GGUF load or Windows runtime test was run. The C++/libclang toolchain is required on the Windows development machine.
+- Stage 3 chat generation/streaming is not started.

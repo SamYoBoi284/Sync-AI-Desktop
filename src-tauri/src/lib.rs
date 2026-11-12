@@ -9,8 +9,10 @@ use tauri::{
 
 mod commands;
 mod storage;
+mod inference;
 
 use storage::Database;
+use inference::runtime::RuntimeManager;
 
 struct StartupGate {
     splash_pending: AtomicBool,
@@ -148,13 +150,18 @@ pub fn run() {
             commands::list_models,
             commands::import_gguf,
             commands::set_default_model,
-            commands::remove_model
+            commands::remove_model,
+            commands::get_runtime_status,
+            commands::estimate_model_resources,
+            commands::load_model,
+            commands::unload_model
         ])
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir()?;
             let database_path = app_data_dir.join("sync-ai-desktop.sqlite3");
             let database = Database::open(&database_path).map_err(std::io::Error::other)?;
             app.manage(database);
+            app.manage(RuntimeManager::new());
             install_tray(app)?;
             Ok(())
         })
