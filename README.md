@@ -35,7 +35,7 @@ A Windows-first, offline-first desktop companion to the Sync AI Android project.
 - Workspace artifacts have their own explicit “Include in chat context” setting.
 - Only opted-in notes and Workspace artifacts are sent as reference material with future local prompts. The context builder caps the combined material at 48 KiB and 20 entries; the inference worker then applies the model's smaller token budget and may trim older Workspace material to preserve recent conversation turns.
 - Tasks support title, details (up to 32 KiB), status, priority and optional due date.
-- File Library opens a native file picker, records the selected file's canonical path, size and SHA-256, and detects missing paths. It does not move, copy or delete the original file.
+- File Library opens a native file picker, records the selected file's canonical path, size and SHA-256, and detects missing paths. Relinking requires the same SHA-256 fingerprint. It does not move, copy or delete the original file.
 - **File Library contents are not read into chat.** The current feature is a path-and-fingerprint registry, not an AI file reader. Any future AI-initiated file operation must go through Phase 6's explicit one-time approval model.
 
 Phase 5 uses SQLite schema migration v4. The previous chat backup format remains version 1 and still exports chats/messages/diagnostics only; Workspace, tasks, notes and File Library records are not yet included in chat backup export/import.
