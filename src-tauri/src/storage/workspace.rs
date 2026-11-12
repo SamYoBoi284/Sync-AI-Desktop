@@ -559,7 +559,7 @@ mod tests {
     fn memory_db() -> Database {
         let connection = Connection::open_in_memory().unwrap();
         connection.pragma_update(None, "foreign_keys", "ON").unwrap();
-        super::super::migrate(&connection).unwrap();
+        super::migrate(&connection).unwrap();
         Database { connection: Mutex::new(connection) }
     }
 
