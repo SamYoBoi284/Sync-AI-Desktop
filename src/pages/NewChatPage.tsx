@@ -32,18 +32,18 @@ export function NewChatPage() {
         <div className="shell-readiness-card">
           <div className="shell-readiness-icon">02</div>
           <div>
-            <h2>Conversation engine</h2>
-            <p>Message storage, streaming and queue handling are the next chat milestone.</p>
+            <h2>Conversation data</h2>
+            <p>Chat persistence, per-message diagnostics and desktop backup/restore are connected in the Phase 3 source.</p>
           </div>
-          <span className="shell-readiness-state is-pending">NEXT</span>
+          <span className="shell-readiness-state">READY</span>
         </div>
         <div className="shell-readiness-card">
           <div className="shell-readiness-icon">03</div>
           <div>
             <h2>Local model</h2>
-            <p>GGUF management and llama.cpp integration follow the storage foundation.</p>
+            <p>GGUF management and llama.cpp integration are the next major milestone.</p>
           </div>
-          <span className="shell-readiness-state is-pending">PLANNED</span>
+          <span className="shell-readiness-state is-pending">NEXT</span>
         </div>
       </section>
 
