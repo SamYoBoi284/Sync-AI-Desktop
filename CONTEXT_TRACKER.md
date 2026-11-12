@@ -324,3 +324,47 @@ Continue Phase 3 validation and hardening:
 
 ### Exact next implementation step
 - Build the chat interaction layer and Sync Core state component without faking model output: define message/composer state and queue/stop UI contracts, then connect them to the Rust runtime only when the inference interface exists.
+
+
+## 16. Phase 3 local data foundation — 2026-11-12
+
+### Scope approved
+- Persist diagnostics on each individual assistant message.
+- Build chat history with search, open, create, rename and delete.
+- Support desktop-native, versioned chat backup export/import.
+- Explicitly exclude Android backup v1 and raw chats.json compatibility.
+- Preserve diagnostics in exported/restored backups.
+
+### Implemented in source
+- Added SQLite dependency with bundled SQLite and schema migration v1.
+- Added chats, messages, app_settings and schema_migrations tables, foreign keys and indexes.
+- Added Rust storage models and Tauri commands for chat CRUD/search, message append, diagnostics update, settings and backup import/export.
+- Added sync-ai-desktop-backup format version 1 with validation limits, timestamp/role/ID checks, duplicate chat skip behavior and transactional import.
+- Added History UI with conversation search, create/open/rename/delete, per-assistant-message diagnostics disclosure, JSON backup import and export.
+- Added typed frontend bridge methods and marked History as an active navigation destination.
+
+### Changed files
+- src-tauri/Cargo.toml
+- src-tauri/src/lib.rs
+- src-tauri/src/commands/mod.rs
+- src-tauri/src/commands/chats.rs
+- src-tauri/src/commands/settings.rs
+- src-tauri/src/storage/mod.rs
+- src-tauri/src/storage/models.rs
+- src/services/nativeBridge.ts
+- src/pages/HistoryPage.tsx
+- src/types/navigation.ts
+- src/App.tsx
+- src/main.tsx
+- src/history.css
+- README.md
+- docs/ARCHITECTURE.md
+- docs/ANDROID_TO_DESKTOP_SPEC.md
+- docs/PHASE3_DATA_CONTRACT.md
+- docs/DEVELOPMENT_LOG.md
+
+### Validation and limitations
+- GitHub source files and current main branch head were fetched back after changes.
+- Rust unit test source was added for migration, per-message diagnostics persistence, backup round-trip, duplicate chat skipping, invalid diagnostics role and duplicate IDs in an imported backup.
+- No Rust/Cargo toolchain is available in the assistant execution environment. No Cargo test/check, npm build, Tauri launch or Windows runtime test has been run.
+- Treat all Phase 3 behavior as source-implemented but unverified until checked on the personal Windows development machine.
