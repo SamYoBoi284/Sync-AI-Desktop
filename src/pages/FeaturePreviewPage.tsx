@@ -1,6 +1,6 @@
 import { plannedPageCopy, type PageId } from "../types/navigation";
 
-type PlannedPageId = Exclude<PageId, "new-chat" | "runtime">;
+type PlannedPageId = Exclude<PageId, "new-chat" | "runtime" | "settings">;
 
 interface FeaturePreviewPageProps {
   page: PlannedPageId;
