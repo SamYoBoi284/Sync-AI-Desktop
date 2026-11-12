@@ -366,5 +366,5 @@ Continue Phase 3 validation and hardening:
 ### Validation and limitations
 - GitHub source files and current main branch head were fetched back after changes.
 - Rust unit test source was added for migration, per-message diagnostics persistence, backup round-trip, duplicate chat skipping, invalid diagnostics role and duplicate IDs in an imported backup.
-- No Rust/Cargo toolchain is available in the assistant execution environment. No Cargo test/check, npm build, Tauri launch or Windows runtime test has been run.
+- The SQLite DDL, core list query, diagnostics-role constraint and cascade behavior were smoke-tested separately with Python sqlite3. No Rust/Cargo toolchain is available in the assistant execution environment. No Cargo test/check, npm build, Tauri launch or Windows runtime test has been run.
 - Treat all Phase 3 behavior as source-implemented but unverified until checked on the personal Windows development machine.
