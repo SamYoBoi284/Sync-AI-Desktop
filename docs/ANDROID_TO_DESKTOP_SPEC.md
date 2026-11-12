@@ -570,3 +570,17 @@ The Android source behavior documented above remains a historical/source-audit r
 New desktop GGUF imports store canonical original paths. Migration v3 preserves older managed-copy records. Registry removal never deletes the model file. Desktop inference runs in a dedicated worker with an optional Windows Job Object committed-memory ceiling, while Tauri/WebView stays outside the job. Runtime diagnostics report cap, PID, working set, private commit and worker errors.
 
 Stage 3 connects SQLite chat history to streamed llama.cpp responses, cancellation, sequential queueing and per-assistant-message diagnostics. Assistant responses are inserted after the exact user turn they answer. The initial prompt is generic role-labelled text, not model-specific chat-template support. Phase 4 stays three stages and is not yet Windows-validated.
+
+
+## Desktop implementation update — Phase 5
+
+The initial roadmap above is a specification. The current desktop source now includes the Phase 5 slice:
+
+- Workspace artifacts are stored in SQLite and support create, search, edit and delete. Assistant replies can be saved into Workspace from chat.
+- Tasks support title, details, status, priority and an optional due date. Notes support editing, pinning and an explicit context opt-in.
+- Only notes and Workspace artifacts that the user marked for chat context are included in the next local prompt. The current context query is bounded to 20 entries and 48 KiB.
+- File Library registration is user initiated through a native picker. It stores a canonical path, file name, extension, size and SHA-256 fingerprint. It detects missing files, supports relinking and removes only the registry row.
+- File Library content is not opened, parsed or supplied to the model. Any future AI-requested access to files requires the Phase 6 one-time approval flow.
+- SQLite migration v4 adds the Workspace, tasks, notes and library tables. These records are not currently included in the existing version-1 chat backup document.
+
+**Current source status:** Phase 5 pages, bridge methods, Rust commands, storage methods and migration are committed. No frontend build, Cargo validation, native/Windows test or UI runtime session has been completed. This update supersedes the earlier Phase 5 “planned” wording for Workspace, File Library and Tasks & Notes.
