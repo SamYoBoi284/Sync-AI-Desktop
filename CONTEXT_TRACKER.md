@@ -37,7 +37,7 @@
 ### Validation still outstanding
 
 - Install npm dependencies and run the frontend production build/type checks.
-- Run `cargo fmt --check`, `cargo check` and `cargo test` with the Windows MSVC toolchain.
+- Run `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check`, `cargo check --manifest-path src-tauri/Cargo.toml` and `cargo test --manifest-path src-tauri/Cargo.toml` with the Windows MSVC toolchain.
 - Compile/link llama.cpp and its native dependencies using C++ Build Tools and LLVM/libclang.
 - Run the app on Windows and verify migrations v1–v4 against a clean and existing database.
 - Exercise Workspace, tasks, notes, File Library add/relink/remove and persistence after restart.
