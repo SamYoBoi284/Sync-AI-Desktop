@@ -61,3 +61,14 @@ Chronological record of meaningful implementation sessions. Keep entries factual
 - Added responsive layouts, keyboard focus treatment and reduced-motion styling.
 - Updated README, architecture and the context tracker.
 - Validation: source files and branch state were reviewed before commit. No TypeScript build, Rust build, Tauri launch or Windows runtime test was run.
+
+
+## 2026-11-12 — Phase 3 initial storage and History implementation
+
+- Added SQLite with bundled SQLite, a version-1 schema migration, chats/messages/app_settings tables, foreign keys and indexes.
+- Added Rust storage models and typed Tauri commands for chat listing/search, create/load/rename/delete, message append, per-assistant-message diagnostics, settings and backup import/export.
+- Added desktop-native sync-ai-desktop-backup format version 1. Import validates bounds, IDs, roles, timestamps and diagnostics, skips existing chat IDs and runs in a transaction. Export includes per-message diagnostics.
+- Added Rust unit tests for migration, diagnostics persistence, backup round-trip, duplicate-chat skipping, invalid diagnostics roles and duplicate IDs in a backup.
+- Added a History UI with search, create, open, rename, delete, diagnostics disclosure, backup import and backup export.
+- Marked History as an active navigation destination. Android backup compatibility remains explicitly out of scope.
+- Validation: source committed and key files fetched back from GitHub. The execution environment has Node.js 22.16.0/npm 10.9.2 but no Rust/Cargo; dependencies cannot be installed here. No TypeScript build, Cargo test/check or Windows runtime test is claimed.
