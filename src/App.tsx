@@ -4,6 +4,7 @@ import { Topbar, type BridgeKind } from "./components/layout/Topbar";
 import { FeaturePreviewPage } from "./pages/FeaturePreviewPage";
 import { NewChatPage } from "./pages/NewChatPage";
 import { RuntimePage } from "./pages/RuntimePage";
+import { HistoryPage } from "./pages/HistoryPage";
 import { getAppInfo, type AppInfo } from "./services/nativeBridge";
 import type { PageId } from "./types/navigation";
 import { LoadingScreen } from "./components/startup/LoadingScreen";
@@ -71,6 +72,8 @@ function App({ showStartupSplash }: AppProps) {
           <div className="shell-page-scroll">
             {activePage === "new-chat" ? (
               <NewChatPage />
+            ) : activePage === "history" ? (
+              <HistoryPage />
             ) : activePage === "runtime" ? (
               <RuntimePage bridgeKind={bridgeKind} info={appInfo} />
             ) : (
