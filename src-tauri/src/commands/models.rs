@@ -37,14 +37,22 @@ pub fn import_gguf(app: AppHandle, db: State<'_, Database>) -> Result<Option<Mod
     let app_dir = app.path().app_data_dir().map_err(|e| format!("Cannot resolve Sync data directory: {e}"))?;
     let model_dir = app_dir.join("models"); fs::create_dir_all(&model_dir).map_err(|e| format!("Cannot create model directory: {e}"))?;
     let id = Uuid::new_v4().to_string();
-    let safe_name: String = source_name.chars().map(|c| if matches!(c, '/' | '\\' | ':') { '_' } else { c }).collect();
+    let safe_name: String = source_name.chars().map(|c| if c.is_control() || matches!(c, '<' | '>' | '"' | '|' | '?' | '*' | ':' | '/' | '\\') { '_' } else { c }).collect();
     let stored_name = format!("{id}_{safe_name}"); let destination = model_dir.join(&stored_name);
     fs::copy(&source, &destination).map_err(|e| format!("Cannot copy model into managed storage: {e}"))?;
     let copied_size = fs::metadata(&destination).map_err(|e| format!("Cannot verify imported model: {e}"))?.len();
-    if copied_size != size_bytes { let _ = fs::remove_file(&destination); return Err("Imported model size did not match the selected source file.".into()); }
+    let mut copied = File::open(&destination).map_err(|e| format!("Cannot verify imported model hash: {e}"))?;
+    let mut verify_hasher = Sha256::new();
+    loop { let count = copied.read(&mut buffer).map_err(|e| format!("Cannot verify imported model hash: {e}"))?; if count == 0 { break; } verify_hasher.update(&buffer[..count]); }
+    let copied_hash = format!("{:x}", verify_hasher.finalize());
+    if copied_size != size_bytes || copied_hash != hash { let _ = fs::remove_file(&destination); return Err("Imported model did not match the selected source file after copying.".into()); }
     let name = Path::new(&source_name).file_stem().and_then(|v| v.to_str()).unwrap_or("GGUF model").to_string();
     let model = ModelRecord { id, name, file_name: source_name, size_bytes, sha256: hash, architecture: None, quantization: None, imported_at: Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true), is_default: false };
-    if let Err(error) = db.register_model(&model, &stored_name) { let _ = fs::remove_file(&destination); return Err(error); }
+    if let Err(error) = db.register_model(&model, &stored_name) {
+        let _ = fs::remove_file(&destination);
+        if let Some(existing) = db.find_model_by_hash(&model.sha256)? { return Ok(Some(ModelImportResult { model: existing, duplicate: true })); }
+        return Err(error);
+    }
     let registered = db.list_models()?.into_iter().find(|item| item.id == model.id).ok_or("Imported model was not registered")?;
     Ok(Some(ModelImportResult { model: registered, duplicate: false }))
 }
