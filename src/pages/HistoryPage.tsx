@@ -156,6 +156,7 @@ export function HistoryPage() {
     if (!file) return;
     setBusy(true);
     try {
+      if (file.size > 50 * 1024 * 1024) throw new Error("Backup exceeds the 50 MiB size limit.");
       const backup = JSON.parse(await file.text());
       const result = await importChatBackup(backup);
       await refresh();
