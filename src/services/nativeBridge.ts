@@ -94,29 +94,37 @@ export interface ImportSummary {
 }
 
 export function listChats(query = "", limit = 100, offset = 0): Promise<ChatSummary[]> {
-  return invoke("list_chats", { query, limit, offset });
+  return invoke<ChatSummary[]>("list_chats", { query, limit, offset });
 }
 
 export function createChat(title?: string): Promise<ChatDetail> {
-  return invoke("create_chat", { title: title ?? null });
+  return invoke<ChatDetail>("create_chat", { title: title ?? null });
 }
 
 export function getChat(chatId: string): Promise<ChatDetail> {
-  return invoke("get_chat", { chatId });
+  return invoke<ChatDetail>("get_chat", { chatId });
 }
 
 export function renameChat(chatId: string, title: string): Promise<void> {
-  return invoke("rename_chat", { chatId, title });
+  return invoke<void>("rename_chat", { chatId, title });
 }
 
 export function deleteChat(chatId: string): Promise<void> {
-  return invoke("delete_chat", { chatId });
+  return invoke<void>("delete_chat", { chatId });
 }
 
 export function exportChatBackup(): Promise<BackupDocument> {
-  return invoke("export_chat_backup");
+  return invoke<BackupDocument>("export_chat_backup");
 }
 
 export function importChatBackup(backup: BackupDocument): Promise<ImportSummary> {
-  return invoke("import_chat_backup", { backup });
+  return invoke<ImportSummary>("import_chat_backup", { backup });
+}
+
+export function getSetting(key: string): Promise<string | null> {
+  return invoke<string | null>("get_setting", { key });
+}
+
+export function setSetting(key: string, valueJson: string): Promise<void> {
+  return invoke<void>("set_setting", { key, valueJson });
 }
