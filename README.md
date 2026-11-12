@@ -8,9 +8,10 @@ This repository is intentionally separate from [Sync-AI](https://github.com/SamY
 
 - **Desktop framework:** Tauri 2
 - **Backend:** Rust
-- **Frontend:** React + TypeScript (proposed; confirm before scaffolding)
+- **Frontend:** React + TypeScript (approved)
+- **Frontend build tool:** Vite (selected)
 - **Local inference:** llama.cpp with GGUF models
-- **Persistence:** SQLite (planned)
+- **Persistence:** SQLite (planned; schema not yet implemented)
 - **Initial platform:** Windows x64
 - **Operating principle:** offline-first; no cloud service required for core chat or inference
 
@@ -18,20 +19,27 @@ The frontend will recreate and adapt the Android application's visual language a
 
 ## Security principle
 
-Sync AI must never have unrestricted access to the host computer. Every tool operation must be presented for explicit, one-time user approval. Approval applies only to the exact proposed action and scope, expires after that action, and cannot silently become a permanent permission. Model output must never directly execute arbitrary commands.
+Sync AI must never have unrestricted access to the host computer. Every AI-invoked tool operation, including reads, requires fresh one-time approval for its exact action and scope. Approval expires after that operation and cannot become a permanent permission. Model output is an untrusted proposal, never execution authority.
 
 ## Repository map
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the initial architecture and [CONTEXT_TRACKER.md](CONTEXT_TRACKER.md) for the authoritative project handoff and development state.
+- [Port specification](docs/ANDROID_TO_DESKTOP_SPEC.md): Android source map, UI behavior, feature mapping and implementation sequence.
+- [Architecture](docs/ARCHITECTURE.md): desktop trust boundaries and target layers.
+- [Context Tracker](CONTEXT_TRACKER.md): authoritative project handoff and development state.
+- [Development Log](docs/DEVELOPMENT_LOG.md): chronological implementation record.
 
 ## Development status
 
-**Foundation planning.** No application runtime or inference integration has been implemented yet.
+**Source audit and specification complete.** No desktop application runtime, native inference integration or host-computer tool has been implemented yet.
 
 ## Source reference
 
 - Android reference repository: https://github.com/SamYoBoi284/Sync-AI
-- Initial desktop audit baseline: `feat/resource-manager-task-manager-17-10-2026`
+- Initial desktop audit baseline: feat/resource-manager-task-manager-17-10-2026
+
+## Windows development prerequisites
+
+Before scaffolding/building, verify Rust stable MSVC, Microsoft C++ Build Tools with Desktop development with C++, Microsoft Edge WebView2, and Node.js LTS/npm. See the [official Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
 
 ## License
 

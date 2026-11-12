@@ -1,86 +1,189 @@
-# Initial Architecture
+# Sync AI Desktop Architecture
 
-This document records the intended boundaries for Sync AI Desktop. It is a planning document, not a description of already implemented code.
+> Planning document. This describes the intended architecture and boundaries, not implemented runtime code.
 
-## High-level flow
+## 1. Product and technology direction
 
-```text
-React UI
-  │ Tauri IPC
-  ▼
+- Windows x64 first.
+- Tauri 2 desktop shell.
+- React + TypeScript frontend (approved).
+- Vite build tooling (selected for the planned scaffold).
+- Rust backend.
+- llama.cpp for local GGUF inference.
+- SQLite as the planned persistence layer; schema/migrations remain open.
+- Offline-first core chat and inference.
+- Desktop project remains separate from the Android repository.
+
+Tauri 2 supports a JavaScript frontend framework. On Windows it uses Microsoft Edge WebView2; this is not an Electron-style bundled Chromium application. Windows development requires Rust/MSVC, Microsoft C++ Build Tools, WebView2 and Node.js for the React frontend.
+
+Official prerequisites: https://v2.tauri.app/start/prerequisites/
+
+## 2. High-level structure
+
+~~~text
+React + TypeScript + Vite
+        │
+        │ typed Tauri IPC
+        ▼
 Rust application layer
-  ├── Chat and conversation services
-  ├── Model lifecycle and inference orchestration
-  ├── Storage (SQLite + local config)
-  ├── Permission and approval broker
-  └── Narrow Windows system adapters
-          │
-          ├── llama.cpp native library
-          └── Explicitly approved OS operations
-```
+  ├── command boundary and app state
+  ├── chat and preference services
+  ├── model registry and lifecycle
+  ├── inference orchestration
+  ├── SQLite storage and migrations
+  ├── tool registry and approval broker
+  ├── audit/diagnostics
+  └── narrow Windows adapters
+        │
+        ├── llama.cpp native library through a narrow FFI
+        └── explicitly approved, operation-specific Windows APIs
+~~~
 
-## Frontend
+## 3. Frontend responsibilities
 
-The frontend owns presentation and user interaction:
-- Chat history, message bubbles and composer
-- Desktop navigation and settings
-- Sync Core visualization and state display
-- Model manager and resource information
-- Explicit operation approval and denial dialogs
+The React frontend owns presentation and user interaction:
+- Desktop navigation, chat history and message rendering.
+- Composer, send/stop behavior and streamed response display.
+- Sync Core state visualization.
+- Model manager, appearance settings, Workspace and later secondary screens.
+- Approval/denial UI for exact proposed operations.
+- Accessibility, keyboard navigation and responsive layout.
 
-The Android application is the design and behavior reference. Its Java UI is not directly reusable as a desktop frontend.
+The Android implementation is the design and behavior reference. Its screens are built programmatically in Java and are not reusable web layouts. Recreate the visual language in HTML/CSS/React instead of trying to embed or translate Android Views.
 
-React + TypeScript is the proposed frontend, pending explicit confirmation before scaffolding.
+No React component should directly perform privileged filesystem, process or OS operations. It calls narrow Tauri commands.
 
-## Rust backend
+## 4. Rust application layer
 
-Rust owns application state and all privileged decisions:
-- Typed Tauri commands
-- Input validation and request normalization
-- Conversation and preference persistence
-- Model lifecycle and inference coordination
-- Tool request mediation
-- Permission checks and audit events
-- Narrow operating-system adapters
+Rust is the trust and policy boundary. It owns:
+- Tauri command handlers and typed IPC structures.
+- Input validation and fixed tool registry.
+- Chat, settings, model metadata and Workspace persistence.
+- Model lifecycle and inference orchestration.
+- Approval request creation, validation, expiry and consumption.
+- Windows platform adapter access.
+- Audit event writing and privacy-aware diagnostics.
 
-Frontend checks improve usability but are not a security boundary. The backend must independently validate every request.
+The frontend is not a security boundary. Rust independently validates every operation and must fail closed.
 
-## Native inference
+## 5. Native inference boundary
 
-Use llama.cpp for GGUF inference. Rust coordinates model loading, generation, cancellation and streaming through a stable native interface. Keep platform-specific compiler settings and native dependencies isolated under the native integration.
+The Android app uses llama.cpp pinned at revision 4a89937 through JNI. Its native code has Android-specific dependencies and must not be reused as the desktop boundary.
 
-The Android JNI bridge is a reference for behavior, not a desktop integration to reuse unchanged.
+Desktop should compile llama.cpp for Windows and expose a narrow, stable interface to Rust. Use opaque handles and explicit load/unload/generate/cancel/diagnostics operations. Token streaming must have clear callback lifetime and cancellation rules. Do not allow C++ exceptions, Rust panics or invalid pointers to cross the FFI boundary.
 
-## Persistence
+Before integrating inference into chat, build a minimal Windows proof of concept and verify load, streamed generation, cancellation, unload and repeated lifecycle.
 
-Planned:
-- SQLite for conversations, messages and structured application metadata.
-- Local config for user preferences and model registry metadata where appropriate.
-- Model files remain in user-selected local storage and are excluded from Git.
+The exact C ABI / Rust FFI wrapper mechanism remains an implementation spike.
 
-Database schema and migration strategy must be designed before persistence is implemented.
+## 6. Storage
 
-## Tool permission boundary
+Planned SQLite data:
+- Chats and ordered messages.
+- Preferences and application settings.
+- Model registry metadata.
+- Workspace artifacts and their generation state.
 
-Every tool action follows this conceptual sequence:
+Use schema migrations, foreign keys and transactions for multi-row changes. Keep GGUF model files external to the repository. Keep user data, local databases, prompts, model contents and secrets out of Git.
 
-1. The model emits a structured tool proposal.
-2. Rust parses and validates the proposal against a fixed tool registry.
-3. The UI displays the exact action, target and scope.
-4. The user explicitly approves or denies that single action.
-5. Rust revalidates the approved request and executes only the registered operation.
-6. Approval expires; the result is returned to the conversation.
+Android chat export format version 1 must remain importable. Import must validate before committing, enforce bounds, skip duplicate IDs and never mutate the backup source.
 
-No generic shell execution or unrestricted model-controlled OS access. No persistent blanket permissions. A tool must not be able to expand its own scope after approval.
+The full schema, migration strategy and backup evolution rules are still open.
 
-## Windows-first strategy
+## 7. Tool registry and approval broker
 
-Start with Windows x64. Keep platform-specific operations behind Rust interfaces so other operating systems can be added later without allowing the model to choose arbitrary native commands.
+Model output is an untrusted proposal, never execution authority.
 
-## Open architecture questions
+Every AI-invoked host operation, including reads, follows this flow:
 
-- Confirm React + TypeScript and Vite before app scaffolding.
-- Decide the exact llama.cpp integration mechanism after a minimal Windows build spike.
-- Define the first version's narrow tool catalog and safe path model.
-- Define database schema and migration approach.
-- Decide installer and update strategy after the app shell works.
+1. Model proposes a registered tool ID and typed arguments.
+2. Rust validates the proposal against the allowlisted tool registry.
+3. Rust resolves the exact target and presents a human-readable operation summary.
+4. User approves or denies that exact operation.
+5. Rust validates the single-use approval binding, expiry and request identity.
+6. Rust revalidates the canonical target/arguments and executes only the registered operation.
+7. Approval is consumed, and a limited result plus safe audit event is returned.
+
+Non-negotiable properties:
+- Fresh one-time approval for every operation.
+- No blanket grants and no “remember my choice”.
+- No generic shell, terminal, script runner or model-controlled executable path.
+- No unrestricted filesystem APIs.
+- Approval cannot be reused or expanded.
+- Windows paths must be canonicalized and checked for traversal, junctions, symlinks/reparse points and time-of-check/time-of-use gaps.
+- Limits on file size, payload size, operation duration and scope.
+- Denial, cancellation, malformed requests and uncertain targets fail closed.
+- Logs omit private file contents, secrets and prompt bodies by default.
+
+Tauri capabilities are a second boundary that controls which commands are exposed to a window. They do not make unsafe Rust command implementations safe. Keep capabilities minimal; do not enable broad shell or filesystem command surfaces.
+
+Official security references:
+- https://tauri.app/security/
+- https://tauri.app/security/capabilities/
+- https://tauri.app/security/permissions/
+
+## 8. Windows platform adapters
+
+Keep Windows-specific functionality behind narrow Rust interfaces. Implement only individually reviewed operations. The model must not decide which executable to run or construct raw PowerShell/CMD commands.
+
+Potential future capabilities such as opening an application, reading a selected file, writing an export, querying system information, controlling media or recording audio each need their own operation-specific request, approval summary, validation and test suite.
+
+Android-specific features such as contacts/calls, Android intents, wake-word foreground services, camera routing, Android alarms and SpeechRecognizer/TTS are not portable and are deferred until separately designed.
+
+## 9. Resource monitoring
+
+Report only what the Windows APIs actually measure. Distinguish process-wide CPU and memory from host-wide metrics. Do not invent per-library or per-model memory splits. Mark estimates as estimates and make diagnostics export an explicit user action.
+
+## 10. Proposed code organization
+
+~~~text
+src/
+  app/
+  components/
+    chat/
+    core/
+    layout/
+    dialogs/
+  pages/
+  hooks/
+  services/
+  state/
+  themes/
+  types/
+
+src-tauri/
+  capabilities/
+  migrations/
+  src/
+    commands/
+    inference/
+    models/
+    permissions/
+    platform/windows/
+    storage/
+    tools/
+
+native/
+  llama/
+
+tests/
+  frontend/
+  rust/
+  security/
+~~~
+
+Create folders as implementation boundaries are needed; do not populate the repository with empty architecture theatre.
+
+## 11. Open implementation decisions
+
+- SQLite schema and migration approach.
+- llama.cpp build configuration and FFI wrapper.
+- Minimum supported Windows version and CPU baseline.
+- Scoped file access model and import strategy.
+- Windows voice recognition and TTS engines.
+- Packaging, signing and update strategy.
+- License selection and third-party notices.
+
+## 12. Status
+
+Architecture and source mapping are documented. No Tauri scaffold, frontend code, Rust commands, database schema, native build or host-computer tool has been implemented or tested.
