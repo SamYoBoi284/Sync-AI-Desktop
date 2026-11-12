@@ -22,7 +22,7 @@ The frontend recreates and adapts the Android application's visual language and 
 
 **Phase 2.1 desktop shell source prepared.** The app has a navigable desktop shell, a New chat landing view, a Runtime view, and clearly-labelled preview screens. Startup splash, single-instance handling and tray lifecycle source are committed but have not been compiled or runtime-tested on Windows.
 
-The New chat composer remains intentionally disabled until chat persistence and inference are connected.
+The New chat composer remains intentionally disabled until local inference is connected. Chat storage and History are being implemented in Phase 3.
 
 **Phase 3 implementation is in progress.** The repository now contains the SQLite storage layer, typed Rust commands, per-message diagnostics data model, desktop backup validation/round-trip tests, and a connected History UI with search, rename, delete, import and export source. These changes have not been built or runtime-tested yet. Android backup compatibility is explicitly out of scope.
 
