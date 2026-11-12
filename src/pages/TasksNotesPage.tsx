@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
-  createNote, createTask, deleteNote, deleteTask, listNotes, listTasks, updateNote, updateTask,
-  type NoteInput, type NoteRecord, type TaskInput, type TaskRecord,
+  createNote, createTask, deleteNote, deleteTask, getNote, listNotes, listTasks, updateNote, updateTask,
+  type NoteInput, type NoteSummary, type TaskInput, type TaskRecord,
 } from "../services/nativeBridge";
 
 type View = "tasks" | "notes";
@@ -11,7 +11,7 @@ const blankNote = (): NoteInput => ({ title: "", content: "", pinned: false, inc
 export function TasksNotesPage() {
   const [view, setView] = useState<View>("tasks");
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
-  const [notes, setNotes] = useState<NoteRecord[]>([]);
+  const [notes, setNotes] = useState<NoteSummary[]>([]);
   const [taskDraft, setTaskDraft] = useState<TaskInput>(blankTask());
   const [noteDraft, setNoteDraft] = useState<NoteInput>(blankNote());
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
@@ -27,7 +27,8 @@ export function TasksNotesPage() {
   async function refreshNotes(preferredId?: string | null) {
     const rows = await listNotes();
     setNotes(rows);
-    const selected = rows.find(note => note.id === (preferredId ?? selectedNoteId)) ?? rows[0] ?? null;
+    const selectedSummary = rows.find(note => note.id === (preferredId ?? selectedNoteId)) ?? rows[0] ?? null;
+    const selected = selectedSummary ? await getNote(selectedSummary.id) : null;
     setSelectedNoteId(selected?.id ?? null);
     setNoteDraft(selected ? {
       title: selected.title, content: selected.content,
@@ -38,12 +39,13 @@ export function TasksNotesPage() {
   useEffect(() => {
     let active = true;
     Promise.all([listTasks(), listNotes()])
-      .then(([taskRows, noteRows]) => {
+      .then(async ([taskRows, noteRows]) => {
         if (!active) return;
         setTasks(taskRows);
         setNotes(noteRows);
         if (noteRows.length) {
-          const first = noteRows[0];
+          const first = await getNote(noteRows[0].id);
+          if (!active) return;
           setSelectedNoteId(first.id);
           setNoteDraft({ title: first.title, content: first.content, pinned: first.pinned, includeInContext: first.includeInContext });
         }
@@ -80,10 +82,16 @@ export function TasksNotesPage() {
     catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
   }
 
-  function selectNote(note: NoteRecord) {
-    setSelectedNoteId(note.id);
-    setNoteDraft({ title: note.title, content: note.content, pinned: note.pinned, includeInContext: note.includeInContext });
+  async function selectNote(note: NoteSummary) {
+    setError("");
     setNotice("");
+    try {
+      const detail = await getNote(note.id);
+      setSelectedNoteId(detail.id);
+      setNoteDraft({ title: detail.title, content: detail.content, pinned: detail.pinned, includeInContext: detail.includeInContext });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
   }
 
   function newNote() {
