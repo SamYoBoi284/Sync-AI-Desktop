@@ -1,40 +1,38 @@
-# Phase 4 revision — runtime memory budget and model-library behavior
+# Phase 4 — local model management and isolated runtime
 
-This document supersedes earlier Phase 4 wording where it describes the RAM Limiter as a model-load eligibility check.
-
-## RAM Limiter: corrected requirement
-
-The optional RAM Limiter is a ceiling for memory Sync allocates for inference work while generating, not a filter that rejects a model because its GGUF file or weights exceed the slider value.
-
-The intended control surface is the native inference session: context/KV-cache sizing, batch and micro-batch sizing, and other allocations the selected backend exposes. The runtime should choose the largest safe configuration within the configured budget where possible, and explain when even its minimum supported configuration cannot fit.
-
-The setting is not a hard process-wide Windows memory cap. Model weights, memory-mapped pages, allocator overhead, WebView memory, and unrelated process allocations cannot all be reliably controlled through the current high-level llama.cpp binding. The UI and diagnostics must distinguish:
-- model file/weight size;
-- inference-session allocation estimate or measurement;
-- total process memory, when measured separately;
-- configured inference allocation budget.
-
-The limiter remains off by default. Enabling or changing it must not silently unload a loaded model. The runtime applies the setting when preparing a session for inference and must report the effective context/batch configuration.
+This revision supersedes the earlier Stage 1/Stage 2 notes that described a managed model-copy directory or an application-level inference allocation budget.
 
 ## Model library behavior
 
-- Import through the Windows native file picker.
-- Register the selected GGUF's original absolute path; do not copy the multi-GB file into application storage.
-- Persist stable model identity using SHA-256 plus metadata.
-- Check that the original path still exists before inspection or loading. A moved or missing file is shown as unavailable and is not loaded.
-- Keep the default model separate from the currently loaded model.
-- Model actions include Load, Set as Default, Unload (when active), and Remove from Sync.
-- Remove from Sync deletes only the registry entry. It never deletes or moves the user's GGUF file.
-- Legacy entries created by earlier managed-copy imports must remain non-destructive. Their existing managed files must not be deleted by the new Remove from Sync action.
+- Import uses the Windows native file picker and accepts GGUF files.
+- Sync stores the selected file's canonical absolute path in SQLite. It does not copy or move new model files.
+- SHA-256 identifies duplicate content. Re-importing the same bytes from another location updates the registered source path so a missing entry can be relinked.
+- The library displays the original path and detects missing or moved files. An unavailable entry cannot be loaded or made the default.
+- The default model and currently loaded model are separate states.
+- Remove from Sync deletes only the registry entry. It never deletes or moves the model file.
+- Existing records from the earlier managed-copy implementation remain readable through a migration compatibility path. Removing one of those records also leaves its old managed file untouched.
+- Startup model loading and Windows sign-in auto-start are not part of this phase.
 
-## Scope exclusions
+## RAM Limiter: hard worker-process ceiling
 
-No multimodal capability registry, image-generation support, Device Assist model category, or DAM-specific model architecture is being designed or implemented in this revision. These are exploratory ideas only and require a later product decision after the desktop app has been built and tested by the user.
+The optional RAM Limiter controls a dedicated inference worker process, not the Tauri/WebView application process.
 
-## Phase 4 remains exactly three stages
+On Windows, Sync creates a Job Object for the child worker and configures JOB_OBJECT_LIMIT_PROCESS_MEMORY before sending it a model-load command. The main Sync AI desktop process is not assigned to this job, so a worker allocation failure or worker termination does not deliberately consume the interface process's memory budget.
 
-1. **Model management + resource budget:** model registry, Windows file picker, original-path tracking, missing-file detection, non-destructive library removal, model selection/default state, hardware information and inference allocation budget.
-2. **Native runtime + model lifecycle:** CPU llama.cpp runtime, explicit load/unload, safe lifecycle, effective session sizing under the configured inference budget.
-3. **Chat inference connection:** conversation context, streaming, cancellation, sequential queued sends, and diagnostics attached to the exact assistant message.
+The limit is a private committed-memory ceiling, not a resident working-set ceiling. The worker loads GGUF weights without file-backed memory mapping so model allocations are included in private committed memory. Runtime diagnostics report the configured ceiling, worker working set (resident memory), worker private committed memory, PID, and the last worker error when available.
 
-Do not add numbered micro-stages. Phase 5 remains streaming/workspace expansion beyond the initial chat inference pipeline; Phase 6 remains secure tools and Device Assist; Phase 7 remains voice, diagnostics/optimization, packaging, testing, security review and release.
+The ceiling includes the model and inference session. A model whose load requires more memory than the configured ceiling may fail to load. A later allocation can also fail or terminate the worker. Sync must report the failure and remain open. The limit is disabled by default. A saved change applies on the next model load; it does not resize an already-running worker.
+
+The model-size/session estimate shown in the library is informational. It is not the enforcement mechanism and must not be described as a guaranteed physical-RAM forecast. The Windows Job Object enforces the private commit ceiling.
+
+## Exactly three stages
+
+1. **Model management + RAM limiter:** original-path GGUF registry, native file picker, SHA-256 identity, missing-file detection, non-destructive removal, default/active separation, host RAM display and configurable worker limit.
+2. **Native runtime + model lifecycle:** CPU llama.cpp running in a dedicated worker, Windows Job Object memory ceiling, explicit manual load/unload, lifecycle serialization and Runtime diagnostics.
+3. **Chat inference connection:** conversation context, token streaming, cancellation, sequential queued sends, and diagnostics attached to the exact assistant message.
+
+No numbered micro-stages are added. Phase 5 remains Workspace, File Library, Tasks & Notes and broader artifact workflows. Phase 6 remains the secure tool/Device Assist layer. Phase 7 remains voice, optimization, packaging, testing, security review and release.
+
+## Current source status
+
+Stages 1 and 2 have been revised in source. Stage 3 chat generation and streaming are still pending. No Windows build, Cargo test/check, frontend build or real GGUF load has been run for this revision; it must be verified on the personal Windows development machine before treating the behavior as validated.

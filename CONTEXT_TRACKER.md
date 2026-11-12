@@ -417,3 +417,29 @@ Stage 2 source is committed to main. It adds:
 The RAM Limiter remains an application-level inference allocation guard, not a guaranteed process-wide memory ceiling. Estimates are conservative estimates, not measured resident memory. GPU offload and configurable context sizing are not part of this first runtime slice.
 
 **Validation:** source has been committed and fetched back from GitHub for inspection. No npm build, Cargo check/test, C++ compile/link, real-model load, or Windows runtime test was run in this environment. The actual Windows development machine must perform those checks. Stage 3 chat generation/streaming is not started.
+
+## Phase 4 correction — original-path library and isolated hard-capped worker
+
+This entry supersedes earlier Phase 4 text above wherever it describes model-copy imports or the RAM Limiter as a generation-only budget/pre-load estimate.
+
+### Decisions implemented in source
+- New GGUF imports use the Windows native file picker, validate the GGUF header, calculate SHA-256 and store the canonical original path. The selected multi-GB file is not copied into Sync's app-data directory.
+- Duplicate hashes update/relink the existing registry entry to the newly selected path.
+- SQLite migration v3 adds nullable source_path. Existing v2 records with a null source path continue to resolve from their legacy managed models folder.
+- The library shows original paths and missing-file state. Missing/moved files cannot load or be made default.
+- Removing a model deletes only its database registry record. Neither new external files nor legacy managed-copy files are deleted.
+- Default and loaded model identities remain separate. Removing an active model requires unloading it first.
+- The llama.cpp model and session have moved out of the Tauri process into a dedicated child worker launched by the same executable.
+- Windows uses a Job Object with JOB_OBJECT_LIMIT_PROCESS_MEMORY for the optional hard private-commit ceiling. The main Tauri/React/WebView process is not in that job. GGUF loading disables memory mapping so model weights use worker-private allocations covered by the limit.
+- Runtime status now carries configured ceiling, worker PID, working set, private committed bytes, hard-limit support and last worker error code/message. Runtime UI polls the status and displays the measurements separately.
+- The Settings control is explicitly saved; changing it does not silently mutate an already loaded worker. It remains off by default.
+- Model resource estimates are now informational only. The OS Job Object is the enforcement mechanism.
+
+### Compatibility and limitations
+- Legacy managed-copy model rows remain resolvable. They are never removed from disk by the revised library action.
+- A hard private-commit ceiling includes model/session allocations. A cap smaller than the model's load requirements can reject the load. The worker may terminate after an allocation failure; Sync's interface remains outside the worker Job Object and reports the failure.
+- Working-set memory and private commit are different measurements. File-backed mapped pages are not the same as private committed memory; the revised worker disables mmap for model weights to make the selected hard ceiling meaningful for those allocations.
+- The model estimate is not a hard physical-RAM forecast. It is display-only.
+- Startup auto-load, Windows sign-in launch, multimodal support and a separate Device Assist Model category remain deferred.
+- Phase 4 still has exactly three stages. Stages 1 and 2 have source changes in this revision; Stage 3 chat generation/streaming is not implemented yet.
+- Validation remains pending: no npm build, Cargo check/test, Windows Job Object integration test, native llama.cpp build, actual model load or UI runtime test has been performed in this environment. Use the existing personal Windows laptop, never the work PC.

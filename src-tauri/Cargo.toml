@@ -21,9 +21,16 @@ rusqlite = { version = "0.37", features = ["bundled"] }
 rfd = "0.15"
 sha2 = "0.10"
 sysinfo = "0.33"
-# Pinned high-level Rust bindings; the crate builds its bundled llama.cpp source.
 llama_cpp = "=0.3.2"
 tauri = { version = "2", features = ["tray-icon"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_JobObjects",
+    "Win32_System_ProcessStatus",
+] }
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-single-instance = "2"

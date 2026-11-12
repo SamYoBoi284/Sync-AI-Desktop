@@ -167,24 +167,48 @@ impl Database {
 
     pub fn list_models(&self) -> Result<Vec<ModelRecord>, String> {
         let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
-        let mut statement = connection.prepare("SELECT id, name, file_name, size_bytes, sha256, architecture, quantization, imported_at, is_default FROM models ORDER BY imported_at DESC").map_err(db_error)?;
-        let rows = statement.query_map([], |row| Ok(ModelRecord {
-            id: row.get(0)?, name: row.get(1)?, file_name: row.get(2)?, size_bytes: row.get(3)?,
-            sha256: row.get(4)?, architecture: row.get(5)?, quantization: row.get(6)?,
-            imported_at: row.get(7)?, is_default: row.get::<_, i64>(8)? != 0,
-        })).map_err(db_error)?;
-        rows.collect::<Result<Vec<_>, _>>().map_err(db_error)
-    }
-    pub fn find_model_by_hash(&self, hash: &str) -> Result<Option<ModelRecord>, String> {
-        let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
-        connection.query_row("SELECT id, name, file_name, size_bytes, sha256, architecture, quantization, imported_at, is_default FROM models WHERE sha256 = ?1",
-            [hash], |row| Ok(ModelRecord {
+        let mut statement = connection.prepare(
+            "SELECT id, name, file_name, size_bytes, sha256, architecture, quantization, imported_at, is_default, source_path, relative_path FROM models ORDER BY imported_at DESC"
+        ).map_err(db_error)?;
+        let rows = statement.query_map([], |row| {
+            let source_path: Option<String> = row.get(9)?;
+            let legacy_path: String = row.get(10)?;
+            let file_path = source_path.clone().unwrap_or(legacy_path);
+            Ok(ModelRecord {
                 id: row.get(0)?, name: row.get(1)?, file_name: row.get(2)?, size_bytes: row.get(3)?,
                 sha256: row.get(4)?, architecture: row.get(5)?, quantization: row.get(6)?,
                 imported_at: row.get(7)?, is_default: row.get::<_, i64>(8)? != 0,
-            })).optional().map_err(db_error)
+                source_path, file_path, is_available: false,
+            })
+        }).map_err(db_error)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(db_error)
     }
-    pub fn update_model_metadata(&self, model_id: &str, architecture: Option<String>, quantization: Option<String>) -> Result<(), String> {
+
+    pub fn find_model_by_hash(&self, hash: &str) -> Result<Option<ModelRecord>, String> {
+        let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
+        connection.query_row(
+            "SELECT id, name, file_name, size_bytes, sha256, architecture, quantization, imported_at, is_default, source_path, relative_path FROM models WHERE sha256 = ?1",
+            [hash],
+            |row| {
+                let source_path: Option<String> = row.get(9)?;
+                let legacy_path: String = row.get(10)?;
+                Ok(ModelRecord {
+                    id: row.get(0)?, name: row.get(1)?, file_name: row.get(2)?, size_bytes: row.get(3)?,
+                    sha256: row.get(4)?, architecture: row.get(5)?, quantization: row.get(6)?,
+                    imported_at: row.get(7)?, is_default: row.get::<_, i64>(8)? != 0,
+                    file_path: source_path.clone().unwrap_or(legacy_path),
+                    source_path, is_available: false,
+                })
+            }
+        ).optional().map_err(db_error)
+    }
+
+    pub fn update_model_metadata(
+        &self,
+        model_id: &str,
+        architecture: Option<String>,
+        quantization: Option<String>,
+    ) -> Result<(), String> {
         let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
         let changed = connection.execute(
             "UPDATE models SET architecture = ?1, quantization = ?2 WHERE id = ?3",
@@ -194,13 +218,46 @@ impl Database {
         Ok(())
     }
 
-    pub fn register_model(&self, model: &ModelRecord, relative_path: &str) -> Result<(), String> {
+    pub fn register_model(&self, model: &ModelRecord, source_path: &str) -> Result<(), String> {
         let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
         let exists: bool = connection.query_row("SELECT EXISTS(SELECT 1 FROM models)", [], |r| r.get(0)).map_err(db_error)?;
-        connection.execute("INSERT INTO models (id, name, file_name, relative_path, size_bytes, sha256, architecture, quantization, imported_at, is_default) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
-            params![model.id, model.name, model.file_name, relative_path, model.size_bytes, model.sha256, model.architecture, model.quantization, model.imported_at, if exists { 0 } else { 1 }]).map_err(db_error)?;
+        // Keep the legacy NOT NULL path column populated for pre-v3 databases.
+        // New entries always resolve from source_path and never copy model bytes.
+        let legacy_placeholder = format!("external:{}", model.id);
+        connection.execute(
+            "INSERT INTO models (id, name, file_name, relative_path, size_bytes, sha256, architecture, quantization, imported_at, is_default, source_path) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            params![
+                model.id, model.name, model.file_name, legacy_placeholder, model.size_bytes,
+                model.sha256, model.architecture, model.quantization, model.imported_at,
+                if exists { 0 } else { 1 }, source_path
+            ],
+        ).map_err(db_error)?;
         Ok(())
     }
+
+    pub fn update_model_source_path(&self, model_id: &str, source_path: &str, file_name: &str) -> Result<(), String> {
+        let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
+        let changed = connection.execute(
+            "UPDATE models SET source_path = ?1, file_name = ?2 WHERE id = ?3",
+            params![source_path, file_name, model_id],
+        ).map_err(db_error)?;
+        if changed == 0 { return Err("Model not found".into()); }
+        Ok(())
+    }
+
+    pub fn model_path_fields(&self, model_id: &str) -> Result<(Option<String>, String), String> {
+        let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
+        connection.query_row(
+            "SELECT source_path, relative_path FROM models WHERE id = ?1",
+            [model_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        ).optional().map_err(db_error)?.ok_or_else(|| "Model not found".into())
+    }
+
+    pub fn model_relative_path(&self, model_id: &str) -> Result<String, String> {
+        self.model_path_fields(model_id).map(|(_, legacy)| legacy)
+    }
+
     pub fn set_default_model(&self, model_id: &str) -> Result<(), String> {
         let mut connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
         let tx = connection.transaction().map_err(db_error)?;
@@ -210,20 +267,21 @@ impl Database {
         tx.execute("UPDATE models SET is_default = 1 WHERE id = ?1", [model_id]).map_err(db_error)?;
         tx.commit().map_err(db_error)
     }
-    pub fn model_relative_path(&self, model_id: &str) -> Result<String, String> {
-        let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
-        connection.query_row("SELECT relative_path FROM models WHERE id = ?1", [model_id], |r| r.get(0))
-            .optional().map_err(db_error)?.ok_or_else(|| "Model not found".into())
-    }
+
     pub fn delete_model_record(&self, model_id: &str) -> Result<(), String> {
         let mut connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
         let tx = connection.transaction().map_err(db_error)?;
-        let was_default: bool = tx.query_row("SELECT is_default FROM models WHERE id = ?1", [model_id], |r| r.get::<_, i64>(0).map(|v| v != 0))
-            .optional().map_err(db_error)?.ok_or_else(|| "Model not found".to_string())?;
+        let was_default: bool = tx.query_row(
+            "SELECT is_default FROM models WHERE id = ?1",
+            [model_id],
+            |r| r.get::<_, i64>(0).map(|v| v != 0),
+        ).optional().map_err(db_error)?.ok_or_else(|| "Model not found".to_string())?;
         tx.execute("DELETE FROM models WHERE id = ?1", [model_id]).map_err(db_error)?;
         if was_default {
-            tx.execute("UPDATE models SET is_default = 1 WHERE id = (SELECT id FROM models ORDER BY imported_at DESC LIMIT 1)", [])
-                .map_err(db_error)?;
+            tx.execute(
+                "UPDATE models SET is_default = 1 WHERE id = (SELECT id FROM models ORDER BY imported_at DESC LIMIT 1)",
+                [],
+            ).map_err(db_error)?;
         }
         tx.commit().map_err(db_error)
     }
@@ -248,7 +306,7 @@ fn migrate(connection: &Connection) -> Result<(), String> {
         "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);"
     ).map_err(db_error)?;
     let mut version: u32 = connection.query_row("SELECT COALESCE(MAX(version), 0) FROM schema_migrations", [], |r| r.get(0)).map_err(db_error)?;
-    if version > 2 { return Err("Database schema is newer than this application version".into()); }
+    if version > 3 { return Err("Database schema is newer than this application version".into()); }
     if version < 1 {
         let tx = connection.unchecked_transaction().map_err(db_error)?;
         tx.execute_batch(
@@ -291,6 +349,14 @@ fn migrate(connection: &Connection) -> Result<(), String> {
         ); CREATE UNIQUE INDEX idx_models_single_default ON models(is_default) WHERE is_default = 1;")
             .map_err(db_error)?;
         tx.execute("INSERT INTO schema_migrations (version, applied_at) VALUES (2, ?1)", [now()]).map_err(db_error)?;
+        tx.commit().map_err(db_error)?;
+        version = 2;
+    }
+    if version < 3 {
+        let tx = connection.unchecked_transaction().map_err(db_error)?;
+        tx.execute_batch("ALTER TABLE models ADD COLUMN source_path TEXT NULL;")
+            .map_err(db_error)?;
+        tx.execute("INSERT INTO schema_migrations (version, applied_at) VALUES (3, ?1)", [now()]).map_err(db_error)?;
         tx.commit().map_err(db_error)?;
     }
     Ok(())
@@ -388,7 +454,7 @@ mod tests {
         let db = memory_db();
         let connection = db.connection.lock().unwrap();
         let count: u32 = connection.query_row("SELECT COUNT(*) FROM schema_migrations", [], |r| r.get(0)).unwrap();
-        assert_eq!(count, 2);
+        assert_eq!(count, 3);
         let model_table: bool = connection.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'models')", [], |r| r.get(0)).unwrap();
         assert!(model_table);
     }
@@ -472,7 +538,8 @@ mod tests {
         let make_model = |id: &str, hash: &str| ModelRecord {
             id: id.into(), name: id.into(), file_name: format!("{id}.gguf"), size_bytes: 1,
             sha256: hash.into(), architecture: None, quantization: None,
-            imported_at: now(), is_default: false,
+            imported_at: now(), is_default: false, source_path: None,
+            file_path: String::new(), is_available: false,
         };
         let first = make_model("model-a", "hash-a");
         let second = make_model("model-b", "hash-b");

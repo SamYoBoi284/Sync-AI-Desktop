@@ -411,3 +411,13 @@ button:focus-visible { outline: 2px solid rgba(104, 216, 235, 0.85); outline-off
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   .startup-screen, .startup-core-ring--outer, .startup-core-orb, .startup-status-dot, .startup-progress span { animation: none !important; }
 }
+
+/* Local model three-dot action menu */
+.shell-model-menu { position: relative; display: inline-flex; align-items: center; }
+.shell-model-menu > summary { list-style: none; display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--border, rgba(160, 160, 180, .22)); border-radius: 9px; cursor: pointer; color: var(--text-primary); font-size: 20px; line-height: 1; }
+.shell-model-menu > summary::-webkit-details-marker { display: none; }
+.shell-model-menu > div { position: absolute; z-index: 20; top: calc(100% + 6px); right: 0; min-width: 190px; display: grid; gap: 4px; padding: 7px; border: 1px solid var(--border, rgba(160, 160, 180, .22)); border-radius: 10px; background: var(--surface-elevated, #171827); box-shadow: 0 12px 32px rgba(0, 0, 0, .28); }
+.shell-model-menu button { width: 100%; border: 0; border-radius: 7px; padding: 9px 10px; text-align: left; color: var(--text-primary); background: transparent; cursor: pointer; }
+.shell-model-menu button:hover:not(:disabled) { background: rgba(150, 150, 180, .12); }
+.shell-model-menu button:disabled { opacity: .42; cursor: not-allowed; }
+.shell-model-menu > summary:focus-visible, .shell-model-menu button:focus-visible { outline: 2px solid var(--accent-primary, #a879ff); outline-offset: 2px; }

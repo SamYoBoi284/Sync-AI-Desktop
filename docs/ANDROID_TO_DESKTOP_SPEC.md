@@ -553,3 +553,14 @@ This document is based on source inspection and official Tauri documentation. It
 - Frontend tests: not run; no frontend application code exists.
 - Native Windows inference: not built or tested.
 - Security approval flow: designed, not implemented or audited.
+
+## Desktop-specific Phase 4 correction
+
+The Android source behavior documented above remains a historical/source-audit record. The desktop implementation decision is now different by design:
+
+- New desktop GGUF imports store the canonical original file path and do not copy the model. Existing desktop managed-copy records remain readable for compatibility.
+- Desktop library removal deletes only the Sync registry record; it does not delete the underlying GGUF, including for legacy managed-copy entries.
+- Desktop inference runs in a dedicated child worker. Windows Job Objects enforce an optional private committed-memory ceiling on that worker, while the Tauri/WebView process stays outside the job.
+- Desktop Runtime diagnostics expose the worker's ceiling, working-set memory, private commit, PID and latest worker failure.
+- The hard ceiling includes model and session allocations. A limit below model load requirements can prevent loading. This is not the previous generation-only allocation-budget design.
+- This is the current desktop-specific decision and supersedes any earlier desktop model-copy or application-level RAM-budget recommendation in this document. Phase 4 remains exactly three stages; chat streaming is Stage 3 and is not yet implemented in this revision.

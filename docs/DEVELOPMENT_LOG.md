@@ -106,3 +106,17 @@ Chronological record of meaningful implementation sessions. Keep entries factual
 - Updated Local Models and Settings with metadata, memory inspection, Load/Unload and RAM enforcement behavior.
 - Validation: source changes committed for review only. No npm build, Cargo check/test, C++ compile/link, actual GGUF load or Windows runtime test was run. The C++/libclang toolchain is required on the Windows development machine.
 - Stage 3 chat generation/streaming is not started.
+
+## 2026-11-12 — Phase 4 corrections: external model paths and isolated worker
+
+- Added SQLite migration v3 for nullable source-path metadata while preserving the legacy managed-path column for old library rows.
+- Reworked GGUF import to register a canonical original path, calculate SHA-256 without copying the source file, and relink duplicate hashes when the same model is selected from another location.
+- Reworked the model library to detect missing files, display the stored path and remove only the Sync registry record. The original file is never deleted.
+- Moved llama.cpp model/session ownership into a dedicated child process launched in worker mode.
+- Added Windows Job Object creation, optional per-process committed-memory limit, and kill-on-job-close lifecycle. The main Tauri/WebView application is not placed in the worker Job Object.
+- Disabled model mmap in the worker so GGUF weights are allocated as worker-private memory subject to the configured commit ceiling.
+- Added worker telemetry to Runtime: configured cap, PID, working set, private committed memory, and last worker error.
+- Replaced the earlier generation-only RAM budget copy and stale model-load estimate gate with the hard worker-ceiling behavior. The pre-load model estimate is now informational only.
+- Updated settings to save the ceiling explicitly and clarified that a smaller limit may prevent a model from loading.
+- Validation: source changes authored and reviewed through GitHub API only. No npm build, Cargo check/test, Windows Job Object test, native compilation or actual GGUF load was run. Personal Windows device validation remains required.
+- Phase 4 remains exactly three stages. Stage 3 chat generation/streaming is still pending.

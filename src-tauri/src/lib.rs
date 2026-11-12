@@ -14,6 +14,10 @@ mod inference;
 use storage::Database;
 use inference::runtime::RuntimeManager;
 
+pub fn run_inference_worker() {
+    inference::worker::run();
+}
+
 struct StartupGate {
     splash_pending: AtomicBool,
 }

@@ -10,6 +10,7 @@ const suggested = (info: HostRamInfo) => Math.max(1, Math.floor(Math.max(1, toGb
 export function SettingsPage({ onNavigate }: { onNavigate: (page: PageId) => void }) {
   const [ram, setRam] = useState<HostRamInfo | null>(null);
   const [config, setConfig] = useState<RamLimiterConfig>({ enabled: false, limitGb: 4 });
+  const [savedConfig, setSavedConfig] = useState<RamLimiterConfig>({ enabled: false, limitGb: 4 });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -21,25 +22,27 @@ export function SettingsPage({ onNavigate }: { onNavigate: (page: PageId) => voi
         if (!active) return;
         setRam(info);
         let parsed: RamLimiterConfig | undefined;
-        try { parsed = raw ? JSON.parse(raw) : undefined; } catch { /* use safe defaults */ }
+        try { parsed = raw ? JSON.parse(raw) : undefined; } catch { /* retain safe defaults */ }
         const max = Math.max(1, Math.floor(toGb(info.totalBytes) - 2));
-        setConfig({
+        const initial = {
           enabled: parsed?.enabled === true,
           limitGb: Math.min(max, Math.max(1, parsed?.limitGb ?? suggested(info))),
-        });
+        };
+        setConfig(initial);
+        setSavedConfig(initial);
       })
       .catch(() => setMessage("Hardware information is available only in the desktop app."))
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
 
-  const persist = async (next: RamLimiterConfig) => {
-    setConfig(next);
+  const persist = async () => {
     setSaving(true);
     setMessage("");
     try {
-      await setSetting(KEY, JSON.stringify(next));
-      setMessage("Saved locally.");
+      await setSetting(KEY, JSON.stringify(config));
+      setSavedConfig(config);
+      setMessage("Saved. The new ceiling applies the next time a model is loaded.");
     } catch {
       setMessage("Could not save this setting in browser preview.");
     } finally {
@@ -48,6 +51,7 @@ export function SettingsPage({ onNavigate }: { onNavigate: (page: PageId) => voi
   };
 
   const maxGb = ram ? Math.max(1, Math.floor(toGb(ram.totalBytes) - 2)) : 1;
+  const dirty = config.enabled !== savedConfig.enabled || config.limitGb !== savedConfig.limitGb;
 
   return (
     <section className="shell-page shell-standard-page">
@@ -63,7 +67,7 @@ export function SettingsPage({ onNavigate }: { onNavigate: (page: PageId) => voi
 
       <div className="shell-settings-grid">
         <button className="shell-settings-card" type="button" onClick={() => onNavigate("appearance")}><span className="shell-settings-card-icon">◐</span><span><strong>Appearance</strong><small>Theme, accent color and motion preferences</small></span><span className="shell-settings-card-arrow">›</span></button>
-        <button className="shell-settings-card" type="button" onClick={() => onNavigate("runtime")}><span className="shell-settings-card-icon">⌁</span><span><strong>Runtime</strong><small>Application and native bridge information</small></span><span className="shell-settings-card-arrow">›</span></button>
+        <button className="shell-settings-card" type="button" onClick={() => onNavigate("runtime")}><span className="shell-settings-card-icon">⌁</span><span><strong>Runtime</strong><small>Worker memory, native diagnostics and host information</small></span><span className="shell-settings-card-arrow">›</span></button>
       </div>
 
       <section className="shell-settings-panel">
@@ -72,33 +76,34 @@ export function SettingsPage({ onNavigate }: { onNavigate: (page: PageId) => voi
           <span className="shell-panel-tag">OPTIONAL · OFF BY DEFAULT</span>
         </div>
         <p className="shell-settings-intro">
-          Sets a memory budget for inference allocations such as the context/KV cache and runtime buffers. It does not decide whether a model's weight file is allowed to load, and it is not a hard Windows process-memory cap. Sync adapts the context and batch configuration to the budget where the native backend allows it.
+          Places the isolated llama.cpp worker inside a Windows Job Object with a hard private-memory commit ceiling. The limit includes model allocations and inference context, so a model that needs more than the ceiling may fail to load. The main Sync AI desktop process stays outside that limit.
         </p>
         {loading ? <p className="shell-settings-footnote">Detecting system memory…</p> : ram ? <>
           <div className="shell-ram-stats">
             <div><small>INSTALLED RAM</small><strong>{toGb(ram.totalBytes).toFixed(1)} GB</strong></div>
             <div><small>CURRENTLY AVAILABLE</small><strong>{toGb(ram.availableBytes).toFixed(1)} GB</strong></div>
-            <div><small>CONFIGURABLE CEILING</small><strong>{maxGb} GB</strong></div>
+            <div><small>MAXIMUM CEILING</small><strong>{maxGb} GB</strong></div>
           </div>
           <label className="shell-ram-toggle">
-            <span><strong>Enable RAM Limiter</strong><small>Limit inference context and working allocations, not model-file eligibility.</small></span>
-            <input type="checkbox" checked={config.enabled} disabled={saving} onChange={e => void persist({ ...config, enabled: e.target.checked })} />
+            <span><strong>Enable RAM Limiter</strong><small>Enforce a hard process-memory ceiling on the inference worker.</small></span>
+            <input type="checkbox" checked={config.enabled} disabled={saving} onChange={e => setConfig(current => ({ ...current, enabled: e.target.checked }))} />
           </label>
           <div className={"shell-ram-slider" + (!config.enabled ? " is-disabled" : "")}>
-            <div className="shell-ram-slider-heading"><label htmlFor="ram-limit">Inference memory ceiling</label><strong>{config.limitGb} GB</strong></div>
-            <input id="ram-limit" type="range" min="1" max={maxGb} step="1" value={Math.min(config.limitGb, maxGb)} disabled={!config.enabled || saving} onChange={e => setConfig({ ...config, limitGb: Number(e.target.value) })} onMouseUp={() => void persist(config)} onTouchEnd={() => void persist(config)} onKeyUp={() => void persist(config)} />
+            <div className="shell-ram-slider-heading"><label htmlFor="ram-limit">Worker memory ceiling</label><strong>{config.limitGb} GB</strong></div>
+            <input id="ram-limit" type="range" min="1" max={maxGb} step="1" value={Math.min(config.limitGb, maxGb)} disabled={!config.enabled || saving} onChange={e => setConfig(current => ({ ...current, limitGb: Number(e.target.value) }))} />
             <div className="shell-ram-slider-scale"><span>1 GB</span><span>{maxGb} GB</span></div>
-            <small>The runtime may reduce usable context or batch size to stay within its managed allocation budget. Model weights and other process memory are not fully controllable by this limiter.</small>
+            <small>This limits committed private memory, not resident working-set size. Runtime diagnostics report both measurements separately.</small>
           </div>
+          <button type="button" disabled={!dirty || saving} onClick={() => void persist()}>{saving ? "Saving…" : "Save RAM Limiter"}</button>
         </> : <p className="shell-settings-footnote">RAM detection requires the native desktop host.</p>}
         {message && <p className="shell-settings-feedback" role="status">{message}</p>}
       </section>
 
       <div className="shell-settings-grid shell-settings-secondary">
-        <button className="shell-settings-card" type="button" onClick={() => onNavigate("models")}><span className="shell-settings-card-icon">◈</span><span><strong>Local models</strong><small>GGUF library, model selection and native runtime.</small></span><span className="shell-settings-card-arrow">›</span></button>
+        <button className="shell-settings-card" type="button" onClick={() => onNavigate("models")}><span className="shell-settings-card-icon">◈</span><span><strong>Local models</strong><small>GGUF library, original file paths and model selection.</small></span><span className="shell-settings-card-arrow">›</span></button>
         <div className="shell-settings-card is-staged"><span className="shell-settings-card-icon">⌑</span><span><strong>Privacy and permissions</strong><small>Explicit approval controls arrive with the secure tool system.</small></span><span className="shell-settings-card-state">PLANNED</span></div>
       </div>
-      <p className="shell-settings-footnote">The setting is stored locally. Changes to the ceiling apply to subsequent inference allocations; they do not retroactively shrink an already allocated native session.</p>
+      <p className="shell-settings-footnote">Changing the saved ceiling does not resize a running worker. Unload and load the model again to apply a new limit. No model is loaded automatically at startup.</p>
     </section>
   );
 }

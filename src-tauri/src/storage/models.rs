@@ -131,7 +131,16 @@ pub struct ImportSummary {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelRecord {
-    pub id: String, pub name: String, pub file_name: String, pub size_bytes: u64,
-    pub sha256: String, pub architecture: Option<String>, pub quantization: Option<String>,
-    pub imported_at: String, pub is_default: bool,
+    pub id: String,
+    pub name: String,
+    pub file_name: String,
+    pub size_bytes: u64,
+    pub sha256: String,
+    pub architecture: Option<String>,
+    pub quantization: Option<String>,
+    pub imported_at: String,
+    pub is_default: bool,
+    pub source_path: Option<String>,
+    pub file_path: String,
+    pub is_available: bool,
 }

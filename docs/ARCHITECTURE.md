@@ -241,3 +241,13 @@ The first Stage 1 implementation adds a SQLite v2 model registry, native GGUF fi
 - RAM budget: enforced as an application-level inference guard for loads, not a hard OS process cap. It does not retroactively unload an active model.
 - Not part of Stage 2: chat generation, streaming, context assembly, queueing, cancellation and message diagnostics wiring. These remain Stage 3.
 - Validation: implementation source only. Windows C++ compile/link, Cargo check/test, frontend build and native runtime tests are pending.
+
+## Phase 4 correction — isolated inference worker
+
+The Phase 4 model registry stores canonical original GGUF paths for new imports; it does not copy model files. Missing paths are marked unavailable. Removing a registry entry is non-destructive, including for legacy managed-copy entries. Schema migration v3 adds source_path while preserving the legacy path column for older rows.
+
+llama.cpp model/session state now belongs to a dedicated child process launched in inference-worker mode. On Windows the supervisor creates a Job Object, configures an optional JOB_OBJECT_LIMIT_PROCESS_MEMORY ceiling and assigns the worker before requesting model load. The UI/WebView process remains outside the job. Model loading disables mmap so model weights use private worker allocations subject to the commit ceiling. A too-small ceiling can prevent model loading; this is a hard limit, not a context-only budget.
+
+Runtime diagnostics expose the configured cap, worker PID, resident working set, private committed memory and the latest worker error. Working set and private commit are distinct values. The library's model memory estimate is informational and does not enforce the cap. The cap is disabled by default and changes apply on a subsequent model load.
+
+**Validation note:** these Phase 4 changes are committed as source only until checked on Windows. Cargo/API compatibility, frontend build, Job Object assignment/limit behavior, real GGUF loading and worker-failure recovery must still be tested. Stage 3 chat generation/streaming is not yet wired.

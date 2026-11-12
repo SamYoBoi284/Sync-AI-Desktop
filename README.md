@@ -95,3 +95,7 @@ The main-window capability still exposes only the core default capability. No sh
 ## License
 
 License has not yet been selected. Do not assume this project is open-source licensed until a LICENSE file is added.
+
+## Current Phase 4 implementation
+
+The model library registers GGUF files by their original path and removes registry entries without deleting source files. Local inference runs in a dedicated worker, with an optional Windows Job Object private-commit ceiling that leaves the main desktop interface outside the limit. Runtime diagnostics report the worker cap, working set, private commit, PID and last error. See docs/PHASE4_REVISION.md for scope and current validation limitations.
