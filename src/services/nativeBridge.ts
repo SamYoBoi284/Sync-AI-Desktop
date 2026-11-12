@@ -96,3 +96,92 @@ export function appendAssistantMessageAfter(
 ): Promise<ChatMessage> {
   return invoke<ChatMessage>("append_assistant_message_after", { chatId, userMessageId, message });
 }
+
+
+export type ArtifactKind = "document" | "code" | "snippet" | "report" | "other";
+export interface WorkspaceArtifact {
+  id: string; title: string; kind: ArtifactKind; content: string;
+  sourceChatId: string | null; sourceMessageId: string | null;
+  includeInContext: boolean; createdAt: string; updatedAt: string;
+}
+export interface WorkspaceArtifactInput {
+  title: string; kind: ArtifactKind; content: string; includeInContext: boolean;
+  sourceChatId?: string | null; sourceMessageId?: string | null;
+}
+export interface WorkspaceContextEntry { kind: string; title: string; content: string; }
+export function listWorkspaceArtifacts(query = ""): Promise<WorkspaceArtifact[]> {
+  return invoke<WorkspaceArtifact[]>("list_workspace_artifacts", { query: query || null });
+}
+export function getWorkspaceArtifact(artifactId: string): Promise<WorkspaceArtifact> {
+  return invoke<WorkspaceArtifact>("get_workspace_artifact", { artifactId });
+}
+export function createWorkspaceArtifact(artifact: WorkspaceArtifactInput): Promise<WorkspaceArtifact> {
+  return invoke<WorkspaceArtifact>("create_workspace_artifact", { artifact });
+}
+export function updateWorkspaceArtifact(artifactId: string, artifact: WorkspaceArtifactInput): Promise<WorkspaceArtifact> {
+  return invoke<WorkspaceArtifact>("update_workspace_artifact", { artifactId, artifact });
+}
+export function deleteWorkspaceArtifact(artifactId: string): Promise<void> {
+  return invoke<void>("delete_workspace_artifact", { artifactId });
+}
+export function listWorkspaceContext(): Promise<WorkspaceContextEntry[]> {
+  return invoke<WorkspaceContextEntry[]>("list_workspace_context");
+}
+
+export type TaskStatus = "todo" | "in-progress" | "done";
+export type TaskPriority = "low" | "normal" | "high";
+export interface TaskRecord {
+  id: string; title: string; details: string; status: TaskStatus; priority: TaskPriority;
+  dueDate: string | null; createdAt: string; updatedAt: string;
+}
+export interface TaskInput {
+  title: string; details: string; status: TaskStatus; priority: TaskPriority; dueDate: string | null;
+}
+export function listTasks(query = ""): Promise<TaskRecord[]> {
+  return invoke<TaskRecord[]>("list_tasks", { query: query || null });
+}
+export function createTask(task: TaskInput): Promise<TaskRecord> {
+  return invoke<TaskRecord>("create_task", { task });
+}
+export function updateTask(taskId: string, task: TaskInput): Promise<TaskRecord> {
+  return invoke<TaskRecord>("update_task", { taskId, task });
+}
+export function deleteTask(taskId: string): Promise<void> {
+  return invoke<void>("delete_task", { taskId });
+}
+
+export interface NoteRecord {
+  id: string; title: string; content: string; pinned: boolean; includeInContext: boolean;
+  createdAt: string; updatedAt: string;
+}
+export interface NoteInput { title: string; content: string; pinned: boolean; includeInContext: boolean; }
+export function listNotes(query = ""): Promise<NoteRecord[]> {
+  return invoke<NoteRecord[]>("list_notes", { query: query || null });
+}
+export function createNote(note: NoteInput): Promise<NoteRecord> {
+  return invoke<NoteRecord>("create_note", { note });
+}
+export function updateNote(noteId: string, note: NoteInput): Promise<NoteRecord> {
+  return invoke<NoteRecord>("update_note", { noteId, note });
+}
+export function deleteNote(noteId: string): Promise<void> {
+  return invoke<void>("delete_note", { noteId });
+}
+
+export interface LibraryFileRecord {
+  id: string; fileName: string; extension: string | null; sourcePath: string;
+  sizeBytes: number; sha256: string; addedAt: string; isAvailable: boolean;
+}
+export interface LibraryImportResult { file: LibraryFileRecord; duplicate: boolean; }
+export function listLibraryFiles(): Promise<LibraryFileRecord[]> {
+  return invoke<LibraryFileRecord[]>("list_library_files");
+}
+export function importLibraryFile(): Promise<LibraryImportResult | null> {
+  return invoke<LibraryImportResult | null>("import_library_file");
+}
+export function relinkLibraryFile(fileId: string): Promise<LibraryFileRecord | null> {
+  return invoke<LibraryFileRecord | null>("relink_library_file", { fileId });
+}
+export function removeLibraryFile(fileId: string): Promise<void> {
+  return invoke<void>("remove_library_file", { fileId });
+}
