@@ -20,14 +20,16 @@ The frontend recreates and adapts the Android application's visual language and 
 
 ## Current development status
 
-**Phase 2.1 desktop shell source prepared.** The app now has a navigable desktop shell, a New chat landing view, a Runtime view, and clearly-labelled preview screens for features that are not implemented yet. The startup splash, single-instance handling and system-tray lifecycle source are part of the current foundation, but these native behaviors have not yet been compiled or runtime-tested on Windows.
+**Phase 2.1 desktop shell source prepared.** The app has a navigable desktop shell, a New chat landing view, a Runtime view, and clearly-labelled preview screens. Startup splash, single-instance handling and tray lifecycle source are committed but have not been compiled or runtime-tested on Windows.
 
-The New chat composer is intentionally disabled. Chat persistence, message streaming and local inference are not connected, so the UI does not pretend to send messages.
+The New chat composer remains intentionally disabled until chat persistence and inference are connected.
+
+**Phase 3 is specified, not implemented.** It will add SQLite-backed chat/message persistence, per-assistant-message diagnostics, functional chat history, and a versioned desktop-native chat backup import/export format. Android backup compatibility is explicitly out of scope.
 
 Not implemented yet:
-- Chat persistence, message queueing, streaming or cancellation
+- SQLite chat persistence, diagnostics storage, history CRUD/search and desktop backup/restore
 - GGUF model import/load/unload and llama.cpp inference
-- SQLite or Workspace storage
+- Workspace storage
 - File Library or Tasks & Notes functionality
 - Voice, camera or recorder features
 - Host-computer tools or approval execution
