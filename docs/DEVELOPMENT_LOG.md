@@ -24,6 +24,7 @@ Chronological record of meaningful implementation sessions. Keep entries factual
 - Added a React + TypeScript + Vite frontend scaffold based on the maintained Tauri React TypeScript starter structure.
 - Added Tauri 2 Rust entry points and one read-only get_app_info command.
 - Added a responsive foundation UI and typed frontend call to the Rust command.
+- Configured Vite's Tauri environment handling and platform-specific build target using the official Tauri Vite guidance.
 - Added a restrictive CSP and a main-window capability limited to core:default. No shell, filesystem, process or opener plugin was added.
 - Kept navigation placeholders visibly marked planned and did not claim chat, model, storage or tool functionality.
 - Disabled packaging until app icon and installer configuration are ready.

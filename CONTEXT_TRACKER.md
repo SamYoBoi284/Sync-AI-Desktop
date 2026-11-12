@@ -145,7 +145,7 @@ Key desktop decisions:
 |---|---|
 | package.json | React, TypeScript, Vite, Tauri CLI/API dependencies and scripts |
 | index.html | WebView entry point |
-| vite.config.ts | React plugin, fixed dev port 1420 and Tauri file-watch exclusion |
+| vite.config.ts | React plugin, fixed dev port 1420, Tauri environment variables, platform build target and file-watch exclusion |
 | tsconfig.json / tsconfig.node.json | Strict frontend and Vite configuration TypeScript |
 | src/main.tsx | React root |
 | src/App.tsx | Foundation UI, planned navigation labels, runtime bridge status |
