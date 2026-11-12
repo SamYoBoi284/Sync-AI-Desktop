@@ -5,6 +5,7 @@ import { FeaturePreviewPage } from "./pages/FeaturePreviewPage";
 import { NewChatPage } from "./pages/NewChatPage";
 import { RuntimePage } from "./pages/RuntimePage";
 import { HistoryPage } from "./pages/HistoryPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { getAppInfo, type AppInfo } from "./services/nativeBridge";
 import type { PageId } from "./types/navigation";
 import { LoadingScreen } from "./components/startup/LoadingScreen";
@@ -15,6 +16,8 @@ interface AppProps {
 
 function App({ showStartupSplash }: AppProps) {
   const [activePage, setActivePage] = useState<PageId>("new-chat");
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const openChatFromSidebar = (chatId: string) => { setSelectedChatId(chatId); setActivePage("history"); };
   const [bridgeKind, setBridgeKind] = useState<BridgeKind>("checking");
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   const [splashVisible, setSplashVisible] = useState(showStartupSplash);
@@ -66,14 +69,16 @@ function App({ showStartupSplash }: AppProps) {
   return (
     <>
       <div className="shell-root" aria-hidden={splashVisible}>
-        <Sidebar activePage={activePage} onNavigate={setActivePage} />
+        <Sidebar activePage={activePage} onNavigate={setActivePage} onOpenChat={openChatFromSidebar} />
         <main className="shell-main">
           <Topbar activePage={activePage} bridgeKind={bridgeKind} version={version} />
           <div className="shell-page-scroll">
             {activePage === "new-chat" ? (
               <NewChatPage />
             ) : activePage === "history" ? (
-              <HistoryPage />
+              <HistoryPage key={selectedChatId ?? "history"} initialChatId={selectedChatId} />
+            ) : activePage === "settings" ? (
+              <SettingsPage onNavigate={setActivePage} />
             ) : activePage === "runtime" ? (
               <RuntimePage bridgeKind={bridgeKind} info={appInfo} />
             ) : (

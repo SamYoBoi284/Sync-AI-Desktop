@@ -54,7 +54,7 @@ function DiagnosticDetails({ diagnostics }: { diagnostics: MessageDiagnostics })
   );
 }
 
-export function HistoryPage() {
+export function HistoryPage({ initialChatId }: { initialChatId?: string | null }) {
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [selected, setSelected] = useState<ChatDetail | null>(null);
   const [query, setQuery] = useState("");
@@ -85,10 +85,10 @@ export function HistoryPage() {
   }
 
   useEffect(() => {
-    void refresh();
+    void refresh(initialChatId ?? undefined);
     // Initial load and explicit search submissions are handled by the query effect below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
+  }, [query, initialChatId]);
 
   async function handleCreate() {
     setBusy(true);
