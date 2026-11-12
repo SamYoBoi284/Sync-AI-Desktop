@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
-  createWorkspaceArtifact, deleteWorkspaceArtifact, listWorkspaceArtifacts, updateWorkspaceArtifact,
-  type WorkspaceArtifact, type WorkspaceArtifactInput,
+  createWorkspaceArtifact, deleteWorkspaceArtifact, getWorkspaceArtifact, listWorkspaceArtifacts, updateWorkspaceArtifact,
+  type WorkspaceArtifactInput, type WorkspaceArtifactSummary,
 } from "../services/nativeBridge";
 
 const blankArtifact = (): WorkspaceArtifactInput => ({
@@ -10,7 +10,7 @@ const blankArtifact = (): WorkspaceArtifactInput => ({
 });
 
 export function WorkspacePage() {
-  const [artifacts, setArtifacts] = useState<WorkspaceArtifact[]>([]);
+  const [artifacts, setArtifacts] = useState<WorkspaceArtifactSummary[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<WorkspaceArtifactInput>(blankArtifact());
   const [query, setQuery] = useState("");
@@ -25,7 +25,8 @@ export function WorkspacePage() {
       const rows = await listWorkspaceArtifacts(query);
       setArtifacts(rows);
       const target = preferredId ?? selectedId;
-      const selected = rows.find(item => item.id === target) ?? rows[0] ?? null;
+      const selectedSummary = rows.find(item => item.id === target) ?? rows[0] ?? null;
+      const selected = selectedSummary ? await getWorkspaceArtifact(selectedSummary.id) : null;
       setSelectedId(selected?.id ?? null);
       setDraft(selected ? {
         title: selected.title, kind: selected.kind, content: selected.content,
@@ -49,15 +50,20 @@ export function WorkspacePage() {
     setError("");
   }
 
-  function selectArtifact(item: WorkspaceArtifact) {
-    setSelectedId(item.id);
-    setDraft({
-      title: item.title, kind: item.kind, content: item.content,
-      includeInContext: item.includeInContext,
-      sourceChatId: item.sourceChatId, sourceMessageId: item.sourceMessageId,
-    });
-    setMessage("");
+  async function selectArtifact(item: WorkspaceArtifactSummary) {
     setError("");
+    setMessage("");
+    try {
+      const detail = await getWorkspaceArtifact(item.id);
+      setSelectedId(detail.id);
+      setDraft({
+        title: detail.title, kind: detail.kind, content: detail.content,
+        includeInContext: detail.includeInContext,
+        sourceChatId: detail.sourceChatId, sourceMessageId: detail.sourceMessageId,
+      });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
   }
 
   async function save() {
