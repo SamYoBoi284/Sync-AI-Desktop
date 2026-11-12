@@ -22,7 +22,7 @@ The frontend recreates and adapts the Android application's visual language and 
 
 **Current milestone: Phase 4 Stage 1 source committed.** The desktop shell, Phase 2.2 sidebar, Phase 3 SQLite chat/history layer and Phase 4 Stage 1 model registry/RAM preference source are committed. Startup/tray, database, model import and UI changes have not been compiled or runtime-tested on Windows.
 
-The sidebar now includes searchable recent conversations sourced from SQLite History, workspace/system navigation and a dedicated Settings destination. Settings controls are staged and are not presented as implemented.
+The sidebar now includes searchable recent conversations sourced from SQLite History, workspace/system navigation and a dedicated Settings destination. Settings includes the optional RAM Limiter; appearance and other preference controls remain staged.
 
 The New chat composer remains intentionally disabled until local inference is connected. Chat storage and History source are implemented in Phase 3; Windows runtime validation remains pending.
 
