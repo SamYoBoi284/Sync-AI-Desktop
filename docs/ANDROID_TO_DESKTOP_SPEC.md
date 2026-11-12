@@ -569,7 +569,7 @@ The Android source behavior documented above remains a historical/source-audit r
 
 New desktop GGUF imports store canonical original paths. Migration v3 preserves older managed-copy records. Registry removal never deletes the model file. Desktop inference runs in a dedicated worker with an optional Windows Job Object committed-memory ceiling, while Tauri/WebView stays outside the job. Runtime diagnostics report cap, PID, working set, private commit and worker errors.
 
-Stage 3 connects SQLite chat history to streamed llama.cpp responses, cancellation, sequential queueing and per-assistant-message diagnostics. Assistant responses are inserted after the exact user turn they answer. The initial prompt is generic role-labelled text, not model-specific chat-template support. Phase 4 stays three stages and is not yet Windows-validated.
+Stage 3 is source-connected to SQLite chat history, streamed llama.cpp responses, cancellation, sequential queueing and per-assistant-message diagnostics. Assistant responses are inserted after the exact user turn they answer. The initial prompt is generic role-labelled text, not model-specific chat-template support. Phase 4 stays three stages and is not yet Windows-validated.
 
 
 ## Desktop implementation update — Phase 5
