@@ -392,4 +392,4 @@ mod tests {
         assert!(runtime.reserve_removal("model-a").is_err());
     }
 
-}}
+}
