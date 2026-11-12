@@ -14,55 +14,43 @@
 
 ## 2. Current status
 
-**Phase:** 4 — local model engine, Stage 2 source committed; native build/runtime validation pending  
-**Status:** SQLite schema/migrations v1-v2, Rust chat/message/settings/model-registry commands, per-assistant-message diagnostics persistence, versioned desktop backup validation/import/export, and a connected History UI are committed to main. Stage 2 adds GGUF metadata parsing, a pinned llama.cpp Rust wrapper, CPU model/context loading and unloading, pre-load memory estimates, and RAM-budget enforcement source. Android backup compatibility is out of scope. No frontend build, Cargo test/check or Windows runtime test has been run.
+**Current milestone:** Phase 5 — Workspace and productivity source implementation committed; Windows validation pending.
 
-### Verified in this repository
+**Source status:** Phase 0 Android audit, Phases 1–4 desktop source, and Phase 5 Workspace/Tasks & Notes/File Library source are present on `main`. Source implementation is not a claim of a successful Windows build or runtime test.
 
-- Public repository exists; default branch is main.
-- Detailed Android-to-desktop port specification is committed at docs/ANDROID_TO_DESKTOP_SPEC.md.
-- React + TypeScript + Vite frontend files are committed.
-- Tauri 2 Rust source/configuration files are committed.
-- Rust registers get_app_info and consume_startup_splash as custom commands.
-- The main-window capability contains core:default only.
-- No shell, filesystem, process or opener plugin is added.
-- The frontend distinguishes the native bridge from browser preview.
-- Sidebar navigation and SQLite-backed recent chats are source-implemented. History and Local Models have functional source interfaces; remaining unimplemented destinations are clearly labelled previews.
-- Phase 4 Stage 1 source adds a GGUF registry, native file-picker import, SHA-256 verification/deduplication, managed model storage, default selection/removal and host RAM detection.
-- Settings contains an optional RAM Limiter toggle and budget slider persisted through SQLite. It is off by default; Stage 2 checks the estimated inference footprint against this budget before model loading and checks the native context estimate again before allocating the session. This is not an OS-enforced hard process cap. The current-available-RAM and system-reserve check always runs, even when the optional configured budget is disabled.
-- Rust registers the Tauri single-instance plugin first and restores/focuses the existing main window on subsequent process launches.
-- Rust owns an atomic startup-splash gate consumed once per process.
-- A native tray menu provides Open, Hide and Exit; left-click restores where supported.
-- Closing the main window hides it instead of terminating the process.
-- Key scaffold files and updated branch head were fetched back from GitHub.
-- Stage 2 adds a bounded GGUF v2/v3 header parser, architecture/model name/quantization extraction, conservative KV/context/batch memory estimation, a pinned llama_cpp 0.3.2 native wrapper, CPU-only manual load/unload, and native session resource estimation.
-- The Local Models page now exposes model metadata, memory inspection, load and unload actions. Model removal is rejected while that model is loading or active. App startup does not load a model.
+### Verified in the current repository
 
-### Not yet implemented or verified
+- React + TypeScript + Vite frontend and Tauri 2/Rust application.
+- Main-window capability remains limited to `core:default`; no shell, filesystem, process or opener plugin is installed.
+- Single-instance startup, first-process splash gate, tray Open/Hide/Exit and close-to-tray source are present.
+- SQLite schema migrations v1–v4 cover chats, messages, settings, models, Workspace artifacts, tasks, notes and File Library records.
+- Phase 3 chat CRUD, History, versioned desktop backup import/export and per-assistant-message diagnostics are source-connected.
+- Phase 4 remains exactly three stages: original-path GGUF registry; isolated CPU llama.cpp worker with optional Windows Job Object private-commit cap; SQLite-backed streaming chat with cancellation, sequential queueing and per-message diagnostics.
+- Phase 5 Workspace supports artifact create/search/edit/delete and saving assistant replies.
+- Tasks & Notes supports task create/status/priority/due-date/delete and note create/edit/pin/delete.
+- Only notes and Workspace artifacts explicitly marked for context enter future local prompts. The combined selected context is capped at 48 KiB and 20 entries.
+- File Library uses a native file picker, canonical original paths, size and SHA-256. Relink updates the registered path; remove deletes only the registry record. The original file is not moved or deleted.
+- File Library metadata is not currently passed to the model and file contents are not read into chat.
+- Workspace, tasks, notes and File Library data are not currently included in the Phase 3 chat backup format.
+- Appearance theme/accent/motion controls, Phase 6 host tools/approvals and Phase 7 voice/release work remain outstanding.
 
-- npm dependency installation and package lockfile
-- Frontend typecheck/production build
-- Rust compilation of the single-instance and tray lifecycle implementation
-- Windows runtime verification of first-start splash, same-process reload behavior, tray restore, close-to-tray, second-launch focus and Exit
-- Tauri development launch on Windows
-- Cargo check/build on Windows
-- Local SQLite runtime/build validation and end-to-end Tauri IPC tests
-- End-to-end backup file dialog/download testing on Windows
-- Actual Windows compilation/linking of llama_cpp/llama.cpp and C++ dependencies
-- Runtime verification with real GGUF files, model load/unload, memory refusal and repeated lifecycle
-- Stage 3 chat generation, streaming, queueing, cancellation, context assembly and diagnostics connection
-- Workspace, File Library, Tasks & Notes or voice
-- Permission/approval UI or enforcement
-- Windows tools/system adapters
-- Frontend automated tests, CI, installer, app icons or packaging (Rust unit test source exists but has not been run)
+### Validation still outstanding
 
-### Validation environment check
+- Install npm dependencies and run the frontend production build/type checks.
+- Run `cargo fmt --check`, `cargo check` and `cargo test` with the Windows MSVC toolchain.
+- Compile/link llama.cpp and its native dependencies using C++ Build Tools and LLVM/libclang.
+- Run the app on Windows and verify migrations v1–v4 against a clean and existing database.
+- Exercise Workspace, tasks, notes, File Library add/relink/remove and persistence after restart.
+- Verify opted-in context prompt assembly, no opt-out leakage and the 48 KiB/20-entry cap.
+- Verify worker lifecycle, Job Object behavior, real GGUF load, streaming, cancellation and queue ordering.
+- Verify tray, splash, single-instance behavior, backup import/export and recovery after errors.
+- Complete Phase 5 frontend/native integration testing before expanding into Phase 6.
 
-- Available in the assistant execution container: Node.js v22.16.0 and npm 10.9.2.
-- Vite 8's current documentation requires Node.js 20.19+ or 22.12+; the available Node 22.16.0 satisfies that requirement.
-- Rust and Cargo are not installed in that container.
-- Outbound DNS/network access to GitHub was unavailable, so project cloning and npm dependency installation could not be completed.
-- Therefore no frontend build, Cargo check, Tauri launch or Windows runtime result is claimed. These checks must be run in the actual Windows development environment after dependency installation.
+No Phase 5 frontend build, Cargo check/test or Windows runtime test has been run. Do not claim these features are validated until those checks actually pass.
+
+### Validation environment note
+
+The assistant-side environment previously had Node.js 22.16.0/npm 10.9.2 but no Rust/Cargo, and dependency installation could not be completed due network access restrictions. The actual Windows development machine is the required validation environment.
 
 ## 3. Product requirements
 
