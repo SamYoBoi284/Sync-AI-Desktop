@@ -145,6 +145,7 @@ pub fn run() {
             commands::rename_chat,
             commands::delete_chat,
             commands::append_message,
+            commands::append_assistant_message_after,
             commands::update_message_diagnostics,
             commands::export_chat_backup,
             commands::import_chat_backup,
@@ -158,7 +159,9 @@ pub fn run() {
             commands::get_runtime_status,
             commands::estimate_model_resources,
             commands::load_model,
-            commands::unload_model
+            commands::unload_model,
+            commands::generate_chat,
+            commands::cancel_generation
         ])
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir()?;

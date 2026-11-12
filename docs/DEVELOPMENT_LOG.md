@@ -120,3 +120,12 @@ Chronological record of meaningful implementation sessions. Keep entries factual
 - Updated settings to save the ceiling explicitly and clarified that a smaller limit may prevent a model from loading.
 - Validation: source changes authored and reviewed through GitHub API only. No npm build, Cargo check/test, Windows Job Object test, native compilation or actual GGUF load was run. Personal Windows device validation remains required.
 - Phase 4 remains exactly three stages. Stage 3 chat generation/streaming is still pending.
+
+## 2026-11-11 — Phase 4 source implementation
+
+- Changed new GGUF imports to original-path registration with SHA-256 deduplication/relinking and SQLite v3 compatibility for legacy records.
+- Added missing-file detection, Rust validation before load/default, non-destructive removal and unload-before-replacement.
+- Moved llama.cpp into a dedicated worker. Windows Job Objects enforce the optional worker private-commit ceiling outside the main UI process. Runtime telemetry displays limit, PID, working set, private commit and errors.
+- Connected Stage 3 chat persistence, role-labelled context, token streaming, cancellation, sequential queueing and per-assistant-message diagnostics. Added positional insertion so each answer stays after its triggering user turn.
+- Model-specific templates remain deferred. No auto-load, sign-in startup, multimodal feature set or DAM category added.
+- No frontend/Cargo/Windows/native build or real-model test has run.

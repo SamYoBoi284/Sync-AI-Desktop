@@ -564,3 +564,9 @@ The Android source behavior documented above remains a historical/source-audit r
 - Desktop Runtime diagnostics expose the worker's ceiling, working-set memory, private commit, PID and latest worker failure.
 - The hard ceiling includes model and session allocations. A limit below model load requirements can prevent loading. This is not the previous generation-only allocation-budget design.
 - This is the current desktop-specific decision and supersedes any earlier desktop model-copy or application-level RAM-budget recommendation in this document. Phase 4 remains exactly three stages; chat streaming is Stage 3 and is not yet implemented in this revision.
+
+## Desktop-only Phase 4 revision
+
+New desktop GGUF imports store canonical original paths. Migration v3 preserves older managed-copy records. Registry removal never deletes the model file. Desktop inference runs in a dedicated worker with an optional Windows Job Object committed-memory ceiling, while Tauri/WebView stays outside the job. Runtime diagnostics report cap, PID, working set, private commit and worker errors.
+
+Stage 3 connects SQLite chat history to streamed llama.cpp responses, cancellation, sequential queueing and per-assistant-message diagnostics. Assistant responses are inserted after the exact user turn they answer. The initial prompt is generic role-labelled text, not model-specific chat-template support. Phase 4 stays three stages and is not yet Windows-validated.

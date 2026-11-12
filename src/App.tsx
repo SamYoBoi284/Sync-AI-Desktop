@@ -19,7 +19,8 @@ function App({ showStartupSplash }: AppProps) {
   const [activePage, setActivePage] = useState<PageId>("new-chat");
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const navigateToPage = (page: PageId) => { if (page === "history" || page === "new-chat") setSelectedChatId(null); setActivePage(page); };
-  const openChatFromSidebar = (chatId: string) => { setSelectedChatId(chatId); setActivePage("history"); };
+  const openChatFromSidebar = (chatId: string) => { setSelectedChatId(chatId); setActivePage("new-chat"); };
+  const startNewChat = () => { setSelectedChatId(null); setActivePage("new-chat"); };
   const [bridgeKind, setBridgeKind] = useState<BridgeKind>("checking");
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   const [splashVisible, setSplashVisible] = useState(showStartupSplash);
@@ -76,9 +77,9 @@ function App({ showStartupSplash }: AppProps) {
           <Topbar activePage={activePage} bridgeKind={bridgeKind} version={version} />
           <div className="shell-page-scroll">
             {activePage === "new-chat" ? (
-              <NewChatPage />
+              <NewChatPage key={selectedChatId ?? "new-chat"} initialChatId={selectedChatId} onNavigate={navigateToPage} onNewChat={startNewChat} />
             ) : activePage === "history" ? (
-              <HistoryPage key={selectedChatId ?? "history"} initialChatId={selectedChatId} />
+              <HistoryPage key={selectedChatId ?? "history"} initialChatId={selectedChatId} onContinueChat={openChatFromSidebar} />
             ) : activePage === "settings" ? (
               <SettingsPage onNavigate={navigateToPage} />
             ) : activePage === "models" ? (
@@ -90,7 +91,7 @@ function App({ showStartupSplash }: AppProps) {
             )}
             <footer className="shell-page-footer">
               <span>SYNC AI DESKTOP · WINDOWS FOUNDATION</span>
-              <span>CHAT INFERENCE NOT CONNECTED</span>
+              <span>LOCAL INFERENCE · ISOLATED WORKER</span>
             </footer>
           </div>
         </main>

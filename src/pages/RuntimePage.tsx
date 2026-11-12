@@ -42,7 +42,7 @@ export function RuntimePage({ bridgeKind, info }: RuntimePageProps) {
         <article className="shell-runtime-card">
           <span className="shell-card-index">02 / INFERENCE WORKER</span><h2>{runtime?.isLoaded ? runtime.loadedModelName : runtime?.isLoading ? "Loading model…" : "No model loaded"}</h2>
           <p>{runtime?.backend ?? "Waiting for the native inference manager."}</p>
-          <span className="shell-card-foot"><i className={runtime?.isLoaded ? "is-on" : ""} />{runtime?.isLoaded ? "WORKER ACTIVE" : runtime?.isLoading ? "STARTING" : "IDLE"}</span>
+          <span className="shell-card-foot"><i className={runtime?.isLoaded ? "is-on" : ""} />{runtime?.isGenerating ? "GENERATING" : runtime?.isLoaded ? "WORKER ACTIVE" : runtime?.isLoading ? "STARTING" : "IDLE"}</span>
         </article>
         <article className="shell-runtime-card">
           <span className="shell-card-index">03 / MEMORY ENFORCEMENT</span><h2>{runtime?.memoryLimitBytes ? bytesLabel(runtime.memoryLimitBytes) : "No hard ceiling"}</h2>
@@ -58,6 +58,7 @@ export function RuntimePage({ bridgeKind, info }: RuntimePageProps) {
           <div><dt>Worker resident working set</dt><dd>{bytesLabel(runtime.workerWorkingSetBytes)}</dd></div>
           <div><dt>Worker private committed memory</dt><dd>{bytesLabel(runtime.workerPrivateBytes)}</dd></div>
           <div><dt>Worker process ID</dt><dd>{runtime.workerPid ?? "Not running"}</dd></div>
+          <div><dt>Generation state</dt><dd>{runtime.isGenerating ? "Generating" : "Idle"}</dd></div>
           <div><dt>Loaded model</dt><dd>{runtime.loadedModelName ?? "None"}</dd></div>
           <div><dt>Context / batch</dt><dd>{runtime.contextLength ? runtime.contextLength.toLocaleString() + " / " + runtime.batchSize : "—"}</dd></div>
         </dl> : <p className="shell-details-note">Waiting for worker telemetry.</p>}

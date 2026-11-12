@@ -1,38 +1,17 @@
-# Phase 4 — local model management and isolated runtime
+# Phase 4 — all three stages in source
 
-This revision supersedes the earlier Stage 1/Stage 2 notes that described a managed model-copy directory or an application-level inference allocation budget.
+## Model library
+New imports use the Windows native file picker, validate the GGUF header, hash the source with SHA-256 and register its canonical original path. Model bytes are not copied or moved. Duplicate re-import can relink the existing record. Missing files are marked unavailable, and Rust checks availability before load or default selection. Default and active models are separate; loading a replacement unloads the active worker first. Remove from Sync deletes only the registry record, never the source file. Older managed-copy rows remain readable and are removed non-destructively.
 
-## Model library behavior
+## Isolated runtime and hard RAM ceiling
+llama.cpp runs in a dedicated child worker. On Windows, the supervisor places the worker in a Job Object with an optional JOB_OBJECT_LIMIT_PROCESS_MEMORY ceiling. The Tauri/WebView process remains outside that job. Model mmap is disabled so GGUF weights use worker-private committed memory. Runtime diagnostics show the configured limit, PID, resident working set, private committed bytes and latest worker error. The ceiling includes model and session allocations, so a model can fail to load if it exceeds the limit. The limiter is off by default and changes apply on the next load. Model estimates are informational only.
 
-- Import uses the Windows native file picker and accepts GGUF files.
-- Sync stores the selected file's canonical absolute path in SQLite. It does not copy or move new model files.
-- SHA-256 identifies duplicate content. Re-importing the same bytes from another location updates the registered source path so a missing entry can be relinked.
-- The library displays the original path and detects missing or moved files. An unavailable entry cannot be loaded or made the default.
-- The default model and currently loaded model are separate states.
-- Remove from Sync deletes only the registry entry. It never deletes or moves the model file.
-- Existing records from the earlier managed-copy implementation remain readable through a migration compatibility path. Removing one of those records also leaves its old managed file untouched.
-- Startup model loading and Windows sign-in auto-start are not part of this phase.
+## Exactly three Phase 4 stages
+1. **Model management + RAM limiter.**
+2. **Native runtime + model lifecycle.**
+3. **Chat inference connection:** SQLite chat persistence, role-labelled context, streamed output, cancellation, sequential queueing and diagnostics attached to the exact assistant message. Each assistant reply is inserted immediately after its triggering user turn to preserve queued conversation order.
 
-## RAM Limiter: hard worker-process ceiling
+Initial prompts use generic role-labelled text from the latest 24 messages, with a 512-token output cap and 2,048-token context. Model-specific GGUF chat templates and configurable sampling are deferred. Phases 5–7 remain Workspace/artifacts, secure tools/Device Assist, then voice/optimization/packaging/testing/release. No micro-stages, auto-load, Windows sign-in startup, multimodal registry or DAM category were added.
 
-The optional RAM Limiter controls a dedicated inference worker process, not the Tauri/WebView application process.
-
-On Windows, Sync creates a Job Object for the child worker and configures JOB_OBJECT_LIMIT_PROCESS_MEMORY before sending it a model-load command. The main Sync AI desktop process is not assigned to this job, so a worker allocation failure or worker termination does not deliberately consume the interface process's memory budget.
-
-The limit is a private committed-memory ceiling, not a resident working-set ceiling. The worker loads GGUF weights without file-backed memory mapping so model allocations are included in private committed memory. Runtime diagnostics report the configured ceiling, worker working set (resident memory), worker private committed memory, PID, and the last worker error when available.
-
-The ceiling includes the model and inference session. A model whose load requires more memory than the configured ceiling may fail to load. A later allocation can also fail or terminate the worker. Sync must report the failure and remain open. The limit is disabled by default. A saved change applies on the next model load; it does not resize an already-running worker.
-
-The model-size/session estimate shown in the library is informational. It is not the enforcement mechanism and must not be described as a guaranteed physical-RAM forecast. The Windows Job Object enforces the private commit ceiling.
-
-## Exactly three stages
-
-1. **Model management + RAM limiter:** original-path GGUF registry, native file picker, SHA-256 identity, missing-file detection, non-destructive removal, default/active separation, host RAM display and configurable worker limit.
-2. **Native runtime + model lifecycle:** CPU llama.cpp running in a dedicated worker, Windows Job Object memory ceiling, explicit manual load/unload, lifecycle serialization and Runtime diagnostics.
-3. **Chat inference connection:** conversation context, token streaming, cancellation, sequential queued sends, and diagnostics attached to the exact assistant message.
-
-No numbered micro-stages are added. Phase 5 remains Workspace, File Library, Tasks & Notes and broader artifact workflows. Phase 6 remains the secure tool/Device Assist layer. Phase 7 remains voice, optimization, packaging, testing, security review and release.
-
-## Current source status
-
-Stages 1 and 2 have been revised in source. Stage 3 chat generation and streaming are still pending. No Windows build, Cargo test/check, frontend build or real GGUF load has been run for this revision; it must be verified on the personal Windows development machine before treating the behavior as validated.
+## Validation
+All three stages have source changes. No frontend build, Cargo check/test, Windows Job Object test, native llama.cpp compile/link, real model load or end-to-end chat test has run for this revision.

@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 
 export interface AppInfo { appName: string; version: string; operatingSystem: string; architecture: string; }
 export async function getAppInfo(): Promise<AppInfo> { return invoke<AppInfo>("get_app_info"); }
@@ -50,7 +50,7 @@ export function setDefaultModel(modelId: string): Promise<void> { return invoke<
 export function removeModel(modelId: string): Promise<void> { return invoke<void>("remove_model", { modelId }); }
 
 export interface RuntimeStatus {
-  isLoading: boolean; isLoaded: boolean; loadingModelId: string | null;
+  isLoading: boolean; isLoaded: boolean; isGenerating: boolean; loadingModelId: string | null;
   loadedModelId: string | null; loadedModelName: string | null; loadedAt: string | null;
   estimatedMemoryBytes: number | null; contextLength: number | null; batchSize: number | null;
   memoryLimitBytes: number | null; workerPid: number | null;
@@ -65,3 +65,34 @@ export function getRuntimeStatus(): Promise<RuntimeStatus> { return invoke<Runti
 export function estimateModelResources(modelId: string): Promise<ModelResourceEstimate> { return invoke<ModelResourceEstimate>("estimate_model_resources", { modelId }); }
 export function loadModel(modelId: string): Promise<RuntimeStatus> { return invoke<RuntimeStatus>("load_model", { modelId }); }
 export function unloadModel(): Promise<RuntimeStatus> { return invoke<RuntimeStatus>("unload_model"); }
+
+
+export interface GenerationEvent {
+  event: "token" | "complete" | "error";
+  generationId: string;
+  token: string | null;
+}
+export interface GenerationResult {
+  text: string;
+  diagnostics: MessageDiagnostics;
+}
+export function generateChat(
+  prompt: string,
+  generationId: string,
+  onEvent: (event: GenerationEvent) => void,
+): Promise<GenerationResult> {
+  const channel = new Channel<GenerationEvent>();
+  channel.onmessage = onEvent;
+  return invoke<GenerationResult>("generate_chat", { prompt, generationId, onEvent: channel });
+}
+export function cancelGeneration(generationId: string): Promise<void> {
+  return invoke<void>("cancel_generation", { generationId });
+}
+
+export function appendAssistantMessageAfter(
+  chatId: string,
+  userMessageId: string,
+  message: { role: "assistant"; body: string; diagnostics: MessageDiagnostics },
+): Promise<ChatMessage> {
+  return invoke<ChatMessage>("append_assistant_message_after", { chatId, userMessageId, message });
+}

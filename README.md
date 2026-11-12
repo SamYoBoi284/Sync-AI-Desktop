@@ -99,3 +99,7 @@ License has not yet been selected. Do not assume this project is open-source lic
 ## Current Phase 4 implementation
 
 The model library registers GGUF files by their original path and removes registry entries without deleting source files. Local inference runs in a dedicated worker, with an optional Windows Job Object private-commit ceiling that leaves the main desktop interface outside the limit. Runtime diagnostics report the worker cap, working set, private commit, PID and last error. See docs/PHASE4_REVISION.md for scope and current validation limitations.
+
+## Phase 4 revised source status
+
+All three stages now have source changes: original-path GGUF library, hard-capped isolated inference worker, and SQLite-backed streaming chat with cancellation, sequential queueing and per-assistant-message diagnostics. See docs/PHASE4_REVISION.md. This revision has not been built or runtime-tested on Windows.

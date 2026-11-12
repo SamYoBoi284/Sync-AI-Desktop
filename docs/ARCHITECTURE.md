@@ -251,3 +251,13 @@ llama.cpp model/session state now belongs to a dedicated child process launched 
 Runtime diagnostics expose the configured cap, worker PID, resident working set, private committed memory and the latest worker error. Working set and private commit are distinct values. The library's model memory estimate is informational and does not enforce the cap. The cap is disabled by default and changes apply on a subsequent model load.
 
 **Validation note:** these Phase 4 changes are committed as source only until checked on Windows. Cargo/API compatibility, frontend build, Job Object assignment/limit behavior, real GGUF loading and worker-failure recovery must still be tested. Stage 3 chat generation/streaming is not yet wired.
+
+## Phase 4 revision — isolated worker and chat connection
+
+New desktop GGUF imports register canonical original paths and SHA-256 without copying files. Migration v3 retains legacy managed-copy compatibility. Missing paths are checked in Rust before loading/default selection. Registry removal never deletes the GGUF. Loading a replacement explicitly unloads the current worker.
+
+llama.cpp runs in a dedicated child process. Windows Job Objects apply an optional JOB_OBJECT_LIMIT_PROCESS_MEMORY ceiling to the worker while the Tauri/WebView interface remains outside the job. Model mmap is disabled; Runtime reports ceiling, PID, working set, private committed bytes and worker errors.
+
+The chat path now uses SQLite persistence, role-labelled context, streamed output, cancellation, sequential queueing and diagnostics on the exact assistant response. Queued assistant replies are inserted after their triggering user turns. Generic role-labelled prompts are used initially; model-specific GGUF chat-template rendering is not yet implemented.
+
+Validation remains pending: frontend build, Cargo check/test, Job Object behavior, native compilation, real model load, streaming/cancellation and Windows UI testing.

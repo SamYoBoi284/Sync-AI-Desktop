@@ -49,3 +49,14 @@ pub fn export_chat_backup(db: State<'_, Database>) -> Result<BackupDocument, Str
 pub fn import_chat_backup(db: State<'_, Database>, backup: BackupDocument) -> Result<ImportSummary, String> {
     db.import_backup(backup)
 }
+
+#[tauri::command]
+pub fn append_assistant_message_after(
+    db: State<'_, Database>,
+    chat_id: String,
+    user_message_id: String,
+    message: NewMessage,
+) -> Result<crate::storage::models::ChatMessage, String> {
+    db.append_assistant_message_after(&chat_id, &user_message_id, message)
+}
+

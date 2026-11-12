@@ -54,7 +54,7 @@ function DiagnosticDetails({ diagnostics }: { diagnostics: MessageDiagnostics })
   );
 }
 
-export function HistoryPage({ initialChatId }: { initialChatId?: string | null }) {
+export function HistoryPage({ initialChatId, onContinueChat }: { initialChatId?: string | null; onContinueChat: (chatId: string) => void }) {
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [selected, setSelected] = useState<ChatDetail | null>(null);
   const [initialSelection, setInitialSelection] = useState(initialChatId ?? null);
@@ -218,6 +218,7 @@ export function HistoryPage({ initialChatId }: { initialChatId?: string | null }
                   <p>Created {formatDate(selected.createdAt)}</p>
                 </div>
                 <div className="history-actions">
+                  <button type="button" onClick={() => onContinueChat(selected.id)} disabled={busy}>Continue chat</button>
                   <button type="button" onClick={handleRename} disabled={busy}>Rename</button>
                   <button type="button" onClick={handleDelete} disabled={busy}>Delete</button>
                 </div>

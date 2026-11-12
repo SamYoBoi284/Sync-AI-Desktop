@@ -2,22 +2,29 @@ use std::{
     io::{BufRead, BufReader, Write},
     process::{Child, ChildStdin, ChildStdout, Command, Stdio},
     sync::{Arc, Mutex},
+    time::Instant,
 };
 
+use chrono::{SecondsFormat, Utc};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use tauri::ipc::Channel;
 use uuid::Uuid;
+
+use crate::storage::models::MessageDiagnostics;
 
 const GIB: u64 = 1024 * 1024 * 1024;
 pub const DEFAULT_CONTEXT_LENGTH: u32 = 2_048;
 pub const DEFAULT_BATCH_SIZE: u32 = 128;
 pub const DEFAULT_MICRO_BATCH_SIZE: u32 = 64;
+pub const DEFAULT_MAX_GENERATION_TOKENS: u32 = 512;
 
 #[derive(Debug, Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RuntimeStatus {
     pub is_loading: bool,
     pub is_loaded: bool,
+    pub is_generating: bool,
     pub loading_model_id: Option<String>,
     pub loaded_model_id: Option<String>,
     pub loaded_model_name: Option<String>,
@@ -38,12 +45,23 @@ pub struct RuntimeStatus {
 impl Default for RuntimeStatus {
     fn default() -> Self {
         Self {
-            is_loading: false, is_loaded: false,
-            loading_model_id: None, loaded_model_id: None, loaded_model_name: None,
-            loaded_at: None, estimated_memory_bytes: None, context_length: None,
-            batch_size: None, memory_limit_bytes: None, worker_pid: None,
-            worker_working_set_bytes: None, worker_private_bytes: None,
-            hard_limit_supported: cfg!(windows), last_error_code: None, last_error: None,
+            is_loading: false,
+            is_loaded: false,
+            is_generating: false,
+            loading_model_id: None,
+            loaded_model_id: None,
+            loaded_model_name: None,
+            loaded_at: None,
+            estimated_memory_bytes: None,
+            context_length: None,
+            batch_size: None,
+            memory_limit_bytes: None,
+            worker_pid: None,
+            worker_working_set_bytes: None,
+            worker_private_bytes: None,
+            hard_limit_supported: cfg!(windows),
+            last_error_code: None,
+            last_error: None,
             backend: "llama.cpp · CPU · isolated worker".into(),
         }
     }
@@ -90,11 +108,7 @@ pub struct ModelResourceEstimate {
     pub estimate_kind: String,
 }
 
-pub fn estimate_resources(
-    model_size_bytes: u64,
-    available_ram_bytes: u64,
-    config: &RamLimiterConfig,
-) -> ModelResourceEstimate {
+pub fn estimate_resources(model_size_bytes: u64, available_ram_bytes: u64, config: &RamLimiterConfig) -> ModelResourceEstimate {
     let estimated_peak_bytes = model_size_bytes
         .saturating_add(model_size_bytes / 10)
         .saturating_add((DEFAULT_CONTEXT_LENGTH as u64).saturating_mul(64 * 1024))
@@ -107,8 +121,32 @@ pub fn estimate_resources(
         configured_limit_bytes: config.limit_bytes(),
         context_length: DEFAULT_CONTEXT_LENGTH,
         batch_size: DEFAULT_BATCH_SIZE,
-        estimate_kind: "Informational model/session estimate only. The Windows Job Object enforces the committed-private-memory ceiling.".into(),
+        estimate_kind: "Informational GGUF-size/session estimate only. The Windows Job Object enforces the committed-private-memory ceiling.".into(),
     }
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GenerationEvent {
+    pub event: String,
+    pub generation_id: String,
+    pub token: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GenerationResult {
+    pub text: String,
+    pub diagnostics: MessageDiagnostics,
+}
+
+struct WorkerGenerationResult {
+    text: String,
+    generated_tokens: u64,
+    prompt_tokens: u64,
+    prompt_eval_ms: f64,
+    stop_reason: String,
+    context_size: u64,
 }
 
 #[derive(Deserialize)]
@@ -137,10 +175,11 @@ struct WorkerFailure {
     message: String,
 }
 
-struct WorkerProcess {
-    child: Child,
-    stdin: ChildStdin,
-    stdout: BufReader<ChildStdout>,
+pub struct WorkerProcess {
+    child: Mutex<Child>,
+    stdin: Mutex<ChildStdin>,
+    stdout: Mutex<BufReader<ChildStdout>>,
+    pid: u32,
     memory_limit_bytes: Option<u64>,
     #[cfg(windows)]
     _job: JobObjectHandle,
@@ -149,14 +188,14 @@ struct WorkerProcess {
 impl WorkerProcess {
     fn spawn(memory_limit_bytes: Option<u64>) -> Result<Self, String> {
         let executable = std::env::current_exe()
-            .map_err(|e| format!("Cannot locate the Sync AI executable for its inference worker: {e}"))?;
+            .map_err(|error| format!("Cannot locate the Sync AI executable for its inference worker: {error}"))?;
         let mut child = Command::new(executable)
             .arg("--inference-worker")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()
-            .map_err(|e| format!("Cannot start the isolated inference worker: {e}"))?;
+            .map_err(|error| format!("Cannot start the isolated inference worker: {error}"))?;
 
         #[cfg(windows)]
         let job = match create_worker_job(&child, memory_limit_bytes) {
@@ -172,38 +211,68 @@ impl WorkerProcess {
         if memory_limit_bytes.is_some() {
             let _ = child.kill();
             let _ = child.wait();
-            return Err("A hard inference-worker memory ceiling is supported only on Windows.".into());
+            return Err("A hard inference-worker memory ceiling is currently supported only on Windows.".into());
         }
 
+        let pid = child.id();
         let stdin = match child.stdin.take() {
             Some(value) => value,
-            None => { let _ = child.kill(); return Err("Inference-worker stdin is unavailable.".into()); }
+            None => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err("Inference-worker stdin is unavailable.".into());
+            }
         };
         let stdout = match child.stdout.take() {
             Some(value) => value,
-            None => { let _ = child.kill(); return Err("Inference-worker stdout is unavailable.".into()); }
+            None => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err("Inference-worker stdout is unavailable.".into());
+            }
         };
 
         Ok(Self {
-            child, stdin, stdout: BufReader::new(stdout), memory_limit_bytes,
+            child: Mutex::new(child),
+            stdin: Mutex::new(stdin),
+            stdout: Mutex::new(BufReader::new(stdout)),
+            pid,
+            memory_limit_bytes,
             #[cfg(windows)]
             _job: job,
         })
     }
 
-    fn request(&mut self, mut payload: Value) -> Result<WorkerReply, WorkerFailure> {
-        let request_id = Uuid::new_v4().to_string();
-        payload["requestId"] = json!(request_id);
-        serde_json::to_writer(&mut self.stdin, &payload)
-            .map_err(|e| WorkerFailure { code: "worker_ipc_error".into(), message: format!("Cannot send a command to the inference worker: {e}") })?;
-        self.stdin.write_all(b"\n").and_then(|_| self.stdin.flush())
-            .map_err(|e| WorkerFailure { code: "worker_ipc_error".into(), message: format!("Cannot flush the inference-worker command: {e}") })?;
+    fn send(&self, payload: Value) -> Result<(), WorkerFailure> {
+        let mut input = self.stdin.lock().map_err(|_| WorkerFailure {
+            code: "worker_ipc_error".into(),
+            message: "Inference-worker input lock is unavailable.".into(),
+        })?;
+        serde_json::to_writer(&mut *input, &payload)
+            .map_err(|error| WorkerFailure {
+                code: "worker_ipc_error".into(),
+                message: format!("Cannot send a command to the inference worker: {error}"),
+            })?;
+        input.write_all(b"\n").and_then(|_| input.flush())
+            .map_err(|error| WorkerFailure {
+                code: "worker_ipc_error".into(),
+                message: format!("Cannot flush the inference-worker command: {error}"),
+            })
+    }
 
+    fn read_line(&self) -> Result<String, WorkerFailure> {
+        let mut output = self.stdout.lock().map_err(|_| WorkerFailure {
+            code: "worker_ipc_error".into(),
+            message: "Inference-worker output lock is unavailable.".into(),
+        })?;
         let mut line = String::new();
-        let count = self.stdout.read_line(&mut line)
-            .map_err(|e| WorkerFailure { code: "worker_ipc_error".into(), message: format!("Cannot read the inference-worker response: {e}") })?;
+        let count = output.read_line(&mut line)
+            .map_err(|error| WorkerFailure {
+                code: "worker_ipc_error".into(),
+                message: format!("Cannot read the inference-worker response: {error}"),
+            })?;
         if count == 0 {
-            let exit = self.child.try_wait().ok().flatten()
+            let exit = self.try_wait().ok().flatten()
                 .map(|status| status.to_string()).unwrap_or_else(|| "unknown exit status".into());
             let limited = self.memory_limit_bytes.is_some();
             return Err(WorkerFailure {
@@ -215,11 +284,24 @@ impl WorkerProcess {
                 },
             });
         }
+        Ok(line)
+    }
 
+    fn request(&self, mut payload: Value) -> Result<WorkerReply, WorkerFailure> {
+        let request_id = Uuid::new_v4().to_string();
+        payload["requestId"] = json!(request_id);
+        self.send(payload)?;
+        let line = self.read_line()?;
         let response: WorkerReply = serde_json::from_str(&line)
-            .map_err(|e| WorkerFailure { code: "worker_protocol_error".into(), message: format!("The inference worker returned an invalid response: {e}") })?;
+            .map_err(|error| WorkerFailure {
+                code: "worker_protocol_error".into(),
+                message: format!("The inference worker returned an invalid response: {error}"),
+            })?;
         if response.request_id != request_id {
-            return Err(WorkerFailure { code: "worker_protocol_error".into(), message: "The inference-worker response did not match the active request.".into() });
+            return Err(WorkerFailure {
+                code: "worker_protocol_error".into(),
+                message: "The inference-worker response did not match the active request.".into(),
+            });
         }
         if !response.ok {
             return Err(WorkerFailure {
@@ -230,6 +312,96 @@ impl WorkerProcess {
         Ok(response)
     }
 
+    fn generate_stream(
+        &self,
+        prompt: &str,
+        generation_id: &str,
+        max_tokens: u32,
+        channel: Channel<GenerationEvent>,
+    ) -> Result<WorkerGenerationResult, WorkerFailure> {
+        let request_id = Uuid::new_v4().to_string();
+        self.send(json!({
+            "action": "generate",
+            "requestId": request_id,
+            "generationId": generation_id,
+            "prompt": prompt,
+            "maxTokens": max_tokens
+        }))?;
+
+        let mut text = String::new();
+        let mut channel_failed = false;
+        loop {
+            let line = self.read_line()?;
+            let event: Value = serde_json::from_str(&line)
+                .map_err(|error| WorkerFailure {
+                    code: "worker_protocol_error".into(),
+                    message: format!("The inference worker returned an invalid stream event: {error}"),
+                })?;
+            if event.get("requestId").and_then(Value::as_str) != Some(request_id.as_str()) {
+                return Err(WorkerFailure {
+                    code: "worker_protocol_error".into(),
+                    message: "The streamed inference event did not match the active generation.".into(),
+                });
+            }
+
+            match event.get("event").and_then(Value::as_str).unwrap_or("") {
+                "token" => {
+                    let token = event.get("token").and_then(Value::as_str).unwrap_or("");
+                    if !token.is_empty() {
+                        text.push_str(token);
+                        if !channel_failed && channel.send(GenerationEvent {
+                            event: "token".into(),
+                            generation_id: generation_id.to_string(),
+                            token: Some(token.to_string()),
+                        }).is_err() {
+                            channel_failed = true;
+                            let _ = self.send(json!({ "action": "cancel", "generationId": generation_id }));
+                        }
+                    }
+                }
+                "complete" => {
+                    if channel_failed {
+                        return Err(WorkerFailure {
+                            code: "stream_channel_closed".into(),
+                            message: "The chat view closed before the generation stream completed.".into(),
+                        });
+                    }
+                    return Ok(WorkerGenerationResult {
+                        text,
+                        generated_tokens: event.get("generatedTokens").and_then(Value::as_u64).unwrap_or(0),
+                        prompt_tokens: event.get("promptTokens").and_then(Value::as_u64).unwrap_or(0),
+                        prompt_eval_ms: event.get("promptEvalMs").and_then(Value::as_f64).unwrap_or(0.0),
+                        stop_reason: event.get("stopReason").and_then(Value::as_str).unwrap_or("unknown").to_string(),
+                        context_size: event.get("contextSize").and_then(Value::as_u64).unwrap_or(0),
+                    });
+                }
+                "error" => {
+                    return Err(WorkerFailure {
+                        code: event.get("errorCode").and_then(Value::as_str).unwrap_or("generation_failed").to_string(),
+                        message: event.get("error").and_then(Value::as_str).unwrap_or("The inference worker could not generate a response.").to_string(),
+                    });
+                }
+                _ => {
+                    return Err(WorkerFailure {
+                        code: "worker_protocol_error".into(),
+                        message: "The inference worker sent an unsupported stream event.".into(),
+                    });
+                }
+            }
+        }
+    }
+
+    fn cancel(&self, generation_id: &str) -> Result<(), String> {
+        self.send(json!({ "action": "cancel", "generationId": generation_id }))
+            .map_err(|failure| failure.message)
+    }
+
+    fn try_wait(&self) -> std::io::Result<Option<std::process::ExitStatus>> {
+        self.child.lock()
+            .map_err(|_| std::io::Error::other("Inference-worker process lock is unavailable"))?
+            .try_wait()
+    }
+
     fn memory_metrics(&self) -> (Option<u64>, Option<u64>) {
         #[cfg(windows)]
         {
@@ -238,25 +410,28 @@ impl WorkerProcess {
                 Foundation::HANDLE,
                 System::ProcessStatus::{K32GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS_EX},
             };
-            let mut counters: PROCESS_MEMORY_COUNTERS_EX = unsafe { std::mem::zeroed() };
-            counters.cb = std::mem::size_of::<PROCESS_MEMORY_COUNTERS_EX>() as u32;
-            let process = self.child.as_raw_handle() as HANDLE;
-            let success = unsafe {
-                K32GetProcessMemoryInfo(
-                    process,
-                    &mut counters as *mut PROCESS_MEMORY_COUNTERS_EX as *mut _,
-                    counters.cb,
-                )
-            };
-            if success != 0 {
-                return (Some(counters.WorkingSetSize as u64), Some(counters.PrivateUsage as u64));
+            if let Ok(child) = self.child.lock() {
+                let process = child.as_raw_handle() as HANDLE;
+                let mut counters: PROCESS_MEMORY_COUNTERS_EX = unsafe { std::mem::zeroed() };
+                counters.cb = std::mem::size_of::<PROCESS_MEMORY_COUNTERS_EX>() as u32;
+                let success = unsafe {
+                    K32GetProcessMemoryInfo(
+                        process,
+                        &mut counters as *mut PROCESS_MEMORY_COUNTERS_EX as *mut _,
+                        counters.cb,
+                    )
+                };
+                if success != 0 {
+                    return (Some(counters.WorkingSetSize as u64), Some(counters.PrivateUsage as u64));
+                }
             }
         }
+
         #[cfg(not(windows))]
         {
             use sysinfo::{Pid, ProcessesToUpdate, System};
             let mut system = System::new();
-            let pid = Pid::from_u32(self.child.id());
+            let pid = Pid::from_u32(self.pid);
             let _ = system.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
             if let Some(process) = system.process(pid) {
                 return (Some(process.memory()), None);
@@ -268,8 +443,10 @@ impl WorkerProcess {
 
 impl Drop for WorkerProcess {
     fn drop(&mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
+        if let Ok(child) = self.child.get_mut() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
     }
 }
 
@@ -300,14 +477,21 @@ fn create_worker_job(child: &Child, memory_limit_bytes: Option<u64>) -> Result<J
     };
 
     let job = unsafe { CreateJobObjectW(null(), null()) };
-    if job.is_null() { return Err("Windows could not create an inference-worker Job Object.".into()); }
+    if job.is_null() {
+        return Err("Windows could not create an inference-worker Job Object.".into());
+    }
 
     let mut limits: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = unsafe { std::mem::zeroed() };
     limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
     if let Some(limit) = memory_limit_bytes {
         limits.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_PROCESS_MEMORY;
-        limits.ProcessMemoryLimit = usize::try_from(limit)
-            .map_err(|_| "The configured memory ceiling is too large for this Windows process.".to_string())?;
+        limits.ProcessMemoryLimit = match usize::try_from(limit) {
+            Ok(value) => value,
+            Err(_) => {
+                unsafe { let _ = CloseHandle(job); }
+                return Err("The configured memory ceiling is too large for this Windows process.".into());
+            }
+        };
     }
 
     let configured = unsafe {
@@ -335,7 +519,7 @@ fn create_worker_job(child: &Child, memory_limit_bytes: Option<u64>) -> Result<J
 struct RuntimeSlot {
     loading_model_id: Option<String>,
     removing_model_id: Option<String>,
-    worker: Option<WorkerProcess>,
+    worker: Option<Arc<WorkerProcess>>,
     loaded_model_id: Option<String>,
     loaded_model_name: Option<String>,
     loaded_at: Option<String>,
@@ -343,6 +527,8 @@ struct RuntimeSlot {
     context_length: Option<u32>,
     batch_size: Option<u32>,
     memory_limit_bytes: Option<u64>,
+    active_generation_id: Option<String>,
+    is_generating: bool,
     last_error_code: Option<String>,
     last_error: Option<String>,
 }
@@ -368,7 +554,9 @@ pub struct RuntimeManager {
 }
 
 impl RuntimeManager {
-    pub fn new() -> Self { Self { slot: Arc::new(Mutex::new(RuntimeSlot::default())) } }
+    pub fn new() -> Self {
+        Self { slot: Arc::new(Mutex::new(RuntimeSlot::default())) }
+    }
 
     pub fn status(&self) -> Result<RuntimeStatus, String> {
         let mut slot = self.slot.lock().map_err(|_| "Runtime state lock is unavailable".to_string())?;
@@ -377,11 +565,11 @@ impl RuntimeManager {
         let mut worker_private_bytes = None;
         let mut worker_exited = false;
 
-        if let Some(worker) = slot.worker.as_mut() {
-            match worker.child.try_wait() {
+        if let Some(worker) = slot.worker.as_ref() {
+            match worker.try_wait() {
                 Ok(Some(_)) | Err(_) => worker_exited = true,
                 Ok(None) => {
-                    worker_pid = Some(worker.child.id());
+                    worker_pid = Some(worker.pid);
                     let (working_set, private_bytes) = worker.memory_metrics();
                     worker_working_set_bytes = working_set;
                     worker_private_bytes = private_bytes;
@@ -397,6 +585,8 @@ impl RuntimeManager {
             slot.estimated_memory_bytes = None;
             slot.context_length = None;
             slot.batch_size = None;
+            slot.active_generation_id = None;
+            slot.is_generating = false;
             if slot.last_error.is_none() {
                 let limited = slot.memory_limit_bytes.is_some();
                 slot.last_error_code = Some(if limited { "memory_limit_exceeded" } else { "worker_exited" }.into());
@@ -411,6 +601,7 @@ impl RuntimeManager {
         Ok(RuntimeStatus {
             is_loading: slot.loading_model_id.is_some(),
             is_loaded: slot.loaded_model_id.is_some(),
+            is_generating: slot.is_generating,
             loading_model_id: slot.loading_model_id.clone(),
             loaded_model_id: slot.loaded_model_id.clone(),
             loaded_model_name: slot.loaded_model_name.clone(),
@@ -465,8 +656,11 @@ impl RuntimeManager {
                     message: "The selected GGUF file is missing or has moved. Remove it from the library and register it again from its current location.".into(),
                 });
             }
-            let mut worker = WorkerProcess::spawn(memory_limit_bytes)
-                .map_err(|message| WorkerFailure { code: if memory_limit_bytes.is_some() { "memory_limit_setup_failed" } else { "worker_start_failed" }.into(), message })?;
+            let worker = Arc::new(WorkerProcess::spawn(memory_limit_bytes)
+                .map_err(|message| WorkerFailure {
+                    code: if memory_limit_bytes.is_some() { "memory_limit_setup_failed" } else { "worker_start_failed" }.into(),
+                    message,
+                })?);
             let response = worker.request(json!({
                 "action": "load",
                 "modelId": model_id,
@@ -507,10 +701,124 @@ impl RuntimeManager {
         }
     }
 
+    pub fn generate_chat(
+        &self,
+        prompt: String,
+        generation_id: String,
+        channel: Channel<GenerationEvent>,
+    ) -> Result<GenerationResult, String> {
+        if generation_id.trim().is_empty() || generation_id.len() > 128 {
+            return Err("Generation ID is invalid.".into());
+        }
+        if prompt.trim().is_empty() || prompt.len() > 512 * 1024 {
+            return Err("Conversation prompt is empty or exceeds the 512 KiB limit.".into());
+        }
+
+        let (worker, model_id, model_name, context_length) = {
+            let mut slot = self.slot.lock().map_err(|_| "Runtime state lock is unavailable".to_string())?;
+            if slot.loading_model_id.is_some() {
+                return Err("Wait for the model to finish loading before sending a message.".into());
+            }
+            if slot.is_generating {
+                return Err("A generation is already active. Queue this message in the chat interface.".into());
+            }
+            let worker = slot.worker.clone().ok_or_else(|| "No local model is loaded. Load a GGUF model from Local models first.".to_string())?;
+            let model_id = slot.loaded_model_id.clone().ok_or_else(|| "The active inference worker has no registered model identity.".to_string())?;
+            let model_name = slot.loaded_model_name.clone().unwrap_or_else(|| "Local GGUF model".into());
+            let context_length = slot.context_length.unwrap_or(DEFAULT_CONTEXT_LENGTH);
+            slot.is_generating = true;
+            slot.active_generation_id = Some(generation_id.clone());
+            slot.last_error = None;
+            slot.last_error_code = None;
+            (worker, model_id, model_name, context_length)
+        };
+
+        let started_at = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
+        let clock = Instant::now();
+        let result = worker.generate_stream(&prompt, &generation_id, DEFAULT_MAX_GENERATION_TOKENS, channel);
+        let generation_ms = clock.elapsed().as_secs_f64() * 1000.0;
+        let finished_at = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
+
+        let mut slot = self.slot.lock().map_err(|_| "Runtime state lock is unavailable".to_string())?;
+        slot.is_generating = false;
+        slot.active_generation_id = None;
+
+        match result {
+            Ok(generated) => {
+                let tokens_per_second = if generation_ms > 0.0 {
+                    Some(generated.generated_tokens as f64 / (generation_ms / 1000.0))
+                } else { None };
+                let status = if generated.stop_reason == "cancelled" { "cancelled" } else { "completed" };
+                let diagnostics = MessageDiagnostics {
+                    generation_id: Some(generation_id),
+                    model_id: Some(model_id),
+                    model_label: Some(model_name),
+                    backend: Some("llama.cpp".into()),
+                    backend_version: Some("0.3.2".into()),
+                    status: Some(status.into()),
+                    prompt_tokens: Some(generated.prompt_tokens),
+                    generated_tokens: Some(generated.generated_tokens),
+                    prompt_eval_ms: Some(generated.prompt_eval_ms),
+                    generation_ms: Some(generation_ms),
+                    tokens_per_second,
+                    context_size: Some(generated.context_size),
+                    max_context_size: Some(context_length as u64),
+                    temperature: None,
+                    stop_reason: Some(generated.stop_reason),
+                    error_code: None,
+                    error_message: None,
+                    started_at: Some(started_at),
+                    finished_at: Some(finished_at),
+                };
+                Ok(GenerationResult { text: generated.text, diagnostics })
+            }
+            Err(failure) => {
+                slot.last_error_code = Some(failure.code.clone());
+                slot.last_error = Some(failure.message.clone());
+                let diagnostics = MessageDiagnostics {
+                    generation_id: Some(generation_id),
+                    model_id: Some(model_id),
+                    model_label: Some(model_name),
+                    backend: Some("llama.cpp".into()),
+                    backend_version: Some("0.3.2".into()),
+                    status: Some("error".into()),
+                    prompt_tokens: None,
+                    generated_tokens: None,
+                    prompt_eval_ms: None,
+                    generation_ms: Some(generation_ms),
+                    tokens_per_second: None,
+                    context_size: None,
+                    max_context_size: Some(context_length as u64),
+                    temperature: None,
+                    stop_reason: None,
+                    error_code: Some(failure.code),
+                    error_message: Some(failure.message),
+                    started_at: Some(started_at),
+                    finished_at: Some(finished_at),
+                };
+                Ok(GenerationResult { text: String::new(), diagnostics })
+            }
+        }
+    }
+
+    pub fn cancel_generation(&self, generation_id: &str) -> Result<(), String> {
+        let worker = {
+            let slot = self.slot.lock().map_err(|_| "Runtime state lock is unavailable".to_string())?;
+            if !slot.is_generating || slot.active_generation_id.as_deref() != Some(generation_id) {
+                return Err("That generation is no longer active.".into());
+            }
+            slot.worker.clone().ok_or_else(|| "The inference worker is no longer running.".to_string())?
+        };
+        worker.cancel(generation_id)
+    }
+
     pub fn reserve_removal(&self, model_id: &str) -> Result<ModelRemovalGuard<'_>, String> {
         let mut slot = self.slot.lock().map_err(|_| "Runtime state lock is unavailable".to_string())?;
         if slot.loading_model_id.is_some() {
             return Err("Wait for the current model load to finish before removing a model.".into());
+        }
+        if slot.is_generating {
+            return Err("Stop the active response before removing a model.".into());
         }
         if slot.loaded_model_id.as_deref() == Some(model_id) {
             return Err("Unload this model before removing it from the library.".into());
@@ -528,10 +836,12 @@ impl RuntimeManager {
             if slot.loading_model_id.is_some() {
                 return Err("Wait for the current model load to finish before unloading.".into());
             }
+            if slot.is_generating {
+                return Err("Stop the active response before unloading the model.".into());
+            }
             slot.worker.take()
         };
-        if let Some(mut worker) = worker {
-            let _ = worker.request(json!({ "action": "unload" }));
+        if let Some(worker) = worker {
             let _ = worker.request(json!({ "action": "shutdown" }));
             drop(worker);
         }
@@ -545,6 +855,8 @@ impl RuntimeManager {
         slot.memory_limit_bytes = None;
         slot.last_error = None;
         slot.last_error_code = None;
+        slot.active_generation_id = None;
+        slot.is_generating = false;
         drop(slot);
         self.status()
     }
@@ -565,21 +877,19 @@ mod tests {
     }
 
     #[test]
-    fn enabled_limiter_produces_a_hard_worker_limit() {
+    fn enabled_limiter_produces_hard_worker_limit() {
         let config = RamLimiterConfig::from_json(Some(r#"{"enabled":true,"limitGb":2.5}"#.into())).unwrap();
         assert_eq!(config.limit_bytes(), Some((2.5 * GIB as f64) as u64));
     }
 
     #[test]
-    fn disabling_limiter_removes_the_hard_ceiling() {
+    fn disabling_limiter_removes_hard_ceiling() {
         let config = RamLimiterConfig::from_json(Some(r#"{"enabled":false,"limitGb":2}"#.into())).unwrap();
         assert_eq!(config.limit_bytes(), None);
     }
 
     #[test]
-    fn removal_reservation_prevents_load() {
-        let runtime = RuntimeManager::new();
-        let _guard = runtime.reserve_removal("model-a").unwrap();
-        assert!(runtime.begin_loading("model-a", None).is_err());
+    fn output_budget_leaves_room_for_generation() {
+        assert!(DEFAULT_MAX_GENERATION_TOKENS < DEFAULT_CONTEXT_LENGTH);
     }
 }

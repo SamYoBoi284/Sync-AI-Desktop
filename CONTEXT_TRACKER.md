@@ -443,3 +443,12 @@ This entry supersedes earlier Phase 4 text above wherever it describes model-cop
 - Startup auto-load, Windows sign-in launch, multimodal support and a separate Device Assist Model category remain deferred.
 - Phase 4 still has exactly three stages. Stages 1 and 2 have source changes in this revision; Stage 3 chat generation/streaming is not implemented yet.
 - Validation remains pending: no npm build, Cargo check/test, Windows Job Object integration test, native llama.cpp build, actual model load or UI runtime test has been performed in this environment. Use the existing personal Windows laptop, never the work PC.
+
+## Phase 4 revised source status — all three stages
+
+- New GGUF imports store canonical original paths and SHA-256 identity without copying/moving source bytes; duplicate hashes can be relinked. Missing files are unavailable and checked in Rust before load/default.
+- Migration v3 preserves legacy managed-copy rows. Library removal deletes only the registry record. Default and active models are distinct; replacement unloads the active worker.
+- llama.cpp runs in a child process. Windows Job Objects apply an optional per-process committed-memory ceiling outside the main UI. Runtime reports ceiling, PID, working set, private commit and last error.
+- Stage 3 connects SQLite chat, role-labelled context, streaming, cancellation, ordered sequential queueing and per-assistant-message diagnostics. Each answer is inserted directly after the user turn it answers.
+- Generic prompts use the latest 24 messages, with 512 output tokens and a 2,048-token context. Model-specific chat templates are deferred.
+- No auto-load, sign-in startup, multimodal registry or DAM category. Phase 4 remains three stages. No build or runtime tests have run.

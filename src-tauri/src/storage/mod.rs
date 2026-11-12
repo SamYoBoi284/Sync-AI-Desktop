@@ -105,6 +105,59 @@ impl Database {
         Ok(ChatMessage { id, chat_id: chat_id.to_string(), role: message.role, body: message.body, created_at, position, diagnostics: message.diagnostics })
     }
 
+    pub fn append_assistant_message_after(
+        &self,
+        chat_id: &str,
+        user_message_id: &str,
+        message: NewMessage,
+    ) -> Result<ChatMessage, String> {
+        validate_message(&message)?;
+        if !matches!(message.role, MessageRole::Assistant) {
+            return Err("Only an assistant message can be inserted after a queued user turn".into());
+        }
+
+        let id = Uuid::new_v4().to_string();
+        let created_at = now();
+        let diagnostics_json = serialize_diagnostics(message.diagnostics.as_ref())?;
+        let mut connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
+        let tx = connection.transaction().map_err(db_error)?;
+        let user_position: i64 = tx.query_row(
+            "SELECT position FROM messages WHERE id = ?1 AND chat_id = ?2 AND role = 'user'",
+            params![user_message_id, chat_id],
+            |row| row.get(0),
+        ).optional().map_err(db_error)?
+            .ok_or_else(|| "The queued user message was not found in this conversation".to_string())?;
+
+        // Move later messages out of the active position range first, then
+        // shift them by one. This avoids UNIQUE(chat_id, position) collisions.
+        tx.execute(
+            "UPDATE messages SET position = position + 1000000000 WHERE chat_id = ?1 AND position > ?2",
+            params![chat_id, user_position],
+        ).map_err(db_error)?;
+        tx.execute(
+            "UPDATE messages SET position = position - 999999999 WHERE chat_id = ?1 AND position >= 1000000000",
+            [chat_id],
+        ).map_err(db_error)?;
+
+        let assistant_position = user_position + 1;
+        tx.execute(
+            "INSERT INTO messages (id, chat_id, role, body, created_at, position, diagnostics_json) VALUES (?1, ?2, 'assistant', ?3, ?4, ?5, ?6)",
+            params![id, chat_id, message.body, created_at, assistant_position, diagnostics_json],
+        ).map_err(db_error)?;
+        tx.execute("UPDATE chats SET updated_at = ?1 WHERE id = ?2", params![now(), chat_id]).map_err(db_error)?;
+        tx.commit().map_err(db_error)?;
+
+        Ok(ChatMessage {
+            id,
+            chat_id: chat_id.to_string(),
+            role: MessageRole::Assistant,
+            body: message.body,
+            created_at,
+            position: assistant_position,
+            diagnostics: message.diagnostics,
+        })
+    }
+
     pub fn update_diagnostics(&self, chat_id: &str, message_id: &str, diagnostics: MessageDiagnostics) -> Result<(), String> {
         let json = serialize_diagnostics(Some(&diagnostics))?.ok_or_else(|| "Diagnostics are required".to_string())?;
         let connection = self.connection.lock().map_err(|_| "Database lock poisoned".to_string())?;
@@ -551,6 +604,30 @@ mod tests {
         let remaining = db.list_models().unwrap();
         assert_eq!(remaining.len(), 1);
         assert!(remaining[0].is_default);
+    }
+
+    #[test]
+    fn queued_assistant_reply_is_inserted_before_later_user_turns() {
+        let db = memory_db();
+        let chat = db.create_chat(None).unwrap();
+        let first = db.append_message(&chat.id, NewMessage {
+            role: MessageRole::User, body: "first question".into(), diagnostics: None,
+        }).unwrap();
+        let second = db.append_message(&chat.id, NewMessage {
+            role: MessageRole::User, body: "queued question".into(), diagnostics: None,
+        }).unwrap();
+
+        db.append_assistant_message_after(&chat.id, &first.id, NewMessage {
+            role: MessageRole::Assistant, body: "first answer".into(), diagnostics: None,
+        }).unwrap();
+
+        let messages = db.get_chat(&chat.id).unwrap().messages;
+        assert_eq!(messages.iter().map(|message| message.body.as_str()).collect::<Vec<_>>(),
+            vec!["first question", "first answer", "queued question"]);
+        assert_eq!(messages[0].position, 0);
+        assert_eq!(messages[1].position, 1);
+        assert_eq!(messages[2].position, 2);
+        assert_eq!(messages[2].id, second.id);
     }
 
 }

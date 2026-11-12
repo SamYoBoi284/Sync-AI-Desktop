@@ -101,7 +101,7 @@ export function LocalModelsPage() {
     finally { setBusyModel(null); }
   };
 
-  const isAnyBusy = busy || busyModel !== null || Boolean(runtime?.isLoading);
+  const isAnyBusy = busy || busyModel !== null || Boolean(runtime?.isLoading) || Boolean(runtime?.isGenerating);
 
   return (
     <section className="shell-page shell-standard-page">

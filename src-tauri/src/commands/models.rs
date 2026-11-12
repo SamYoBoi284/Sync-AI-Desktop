@@ -171,7 +171,13 @@ pub fn import_gguf(
 }
 
 #[tauri::command]
-pub fn set_default_model(db: State<'_, Database>, model_id: String) -> Result<(), String> {
+pub fn set_default_model(
+    app: tauri::AppHandle,
+    db: State<'_, Database>,
+    model_id: String,
+) -> Result<(), String> {
+    let path = resolve_model_path(&app, &db, &model_id)?;
+    let _ = GgufMetadata::read(&path)?;
     db.set_default_model(&model_id)
 }
 

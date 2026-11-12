@@ -5,8 +5,8 @@ use crate::{
     inference::{
         gguf::GgufMetadata,
         runtime::{
-            estimate_resources, ModelResourceEstimate, RamLimiterConfig, RuntimeManager,
-            RuntimeStatus,
+            estimate_resources, GenerationEvent, GenerationResult, ModelResourceEstimate,
+            RamLimiterConfig, RuntimeManager, RuntimeStatus,
         },
     },
     storage::{models::ModelRecord, Database},
@@ -50,12 +50,35 @@ pub async fn load_model(
         manager.load_model(model_id, record.name, path, memory_limit)
     })
     .await
-    .map_err(|e| format!("The inference-worker task stopped unexpectedly: {e}"))?
+    .map_err(|error| format!("The inference-worker task stopped unexpectedly: {error}"))?
 }
 
 #[tauri::command]
 pub fn unload_model(runtime: State<'_, RuntimeManager>) -> Result<RuntimeStatus, String> {
     runtime.unload()
+}
+
+#[tauri::command]
+pub async fn generate_chat(
+    runtime: State<'_, RuntimeManager>,
+    prompt: String,
+    generation_id: String,
+    on_event: tauri::ipc::Channel<GenerationEvent>,
+) -> Result<GenerationResult, String> {
+    let manager = runtime.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        manager.generate_chat(prompt, generation_id, on_event)
+    })
+    .await
+    .map_err(|error| format!("The chat-generation task stopped unexpectedly: {error}"))?
+}
+
+#[tauri::command]
+pub fn cancel_generation(
+    runtime: State<'_, RuntimeManager>,
+    generation_id: String,
+) -> Result<(), String> {
+    runtime.cancel_generation(&generation_id)
 }
 
 fn find_model(db: &Database, model_id: &str) -> Result<ModelRecord, String> {
