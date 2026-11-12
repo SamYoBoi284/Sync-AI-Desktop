@@ -8,6 +8,9 @@ use tauri::{
 };
 
 mod commands;
+mod storage;
+
+use storage::Database;
 
 struct StartupGate {
     splash_pending: AtomicBool,
@@ -129,9 +132,24 @@ pub fn run() {
         .manage(StartupGate::new())
         .invoke_handler(tauri::generate_handler![
             commands::get_app_info,
-            consume_startup_splash
+            consume_startup_splash,
+            commands::list_chats,
+            commands::create_chat,
+            commands::get_chat,
+            commands::rename_chat,
+            commands::delete_chat,
+            commands::append_message,
+            commands::update_message_diagnostics,
+            commands::export_chat_backup,
+            commands::import_chat_backup,
+            commands::get_setting,
+            commands::set_setting
         ])
         .setup(|app| {
+            let app_data_dir = app.path().app_data_dir()?;
+            let database_path = app_data_dir.join("sync-ai-desktop.sqlite3");
+            let database = Database::open(&database_path).map_err(std::io::Error::other)?;
+            app.manage(database);
             install_tray(app)?;
             Ok(())
         })
