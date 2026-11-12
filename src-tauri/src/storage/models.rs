@@ -49,7 +49,7 @@ pub struct ChatSummary {
     pub title: String,
     pub created_at: String,
     pub updated_at: String,
-    pub message_count: u64,
+    pub message_count: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -60,7 +60,7 @@ pub struct ChatMessage {
     pub role: MessageRole,
     pub body: String,
     pub created_at: String,
-    pub position: u64,
+    pub position: i64,
     pub diagnostics: Option<MessageDiagnostics>,
 }
 
