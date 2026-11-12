@@ -57,6 +57,7 @@ function DiagnosticDetails({ diagnostics }: { diagnostics: MessageDiagnostics })
 export function HistoryPage({ initialChatId }: { initialChatId?: string | null }) {
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [selected, setSelected] = useState<ChatDetail | null>(null);
+  const [initialSelection, setInitialSelection] = useState(initialChatId ?? null);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -85,10 +86,10 @@ export function HistoryPage({ initialChatId }: { initialChatId?: string | null }
   }
 
   useEffect(() => {
-    void refresh(initialChatId ?? undefined);
+    void refresh(initialSelection ?? undefined);
     // Initial load and explicit search submissions are handled by the query effect below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, initialChatId]);
+  }, [query, initialSelection]);
 
   async function handleCreate() {
     setBusy(true);
@@ -198,7 +199,7 @@ export function HistoryPage({ initialChatId }: { initialChatId?: string | null }
             <ul className="history-chat-list">
               {chats.map((chat) => (
                 <li key={chat.id}>
-                  <button className={`history-chat-entry${selected?.id === chat.id ? " is-selected" : ""}`} onClick={() => void getChat(chat.id).then(setSelected)} type="button">
+                  <button className={`history-chat-entry${selected?.id === chat.id ? " is-selected" : ""}`} onClick={() => { setInitialSelection(null); void getChat(chat.id).then(setSelected); }} type="button">
                     <strong>{chat.title}</strong>
                     <span>{chat.messageCount} messages</span>
                     <time>{formatDate(chat.updatedAt)}</time>
