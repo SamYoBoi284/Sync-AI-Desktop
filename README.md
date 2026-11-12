@@ -8,18 +8,58 @@ This repository is intentionally separate from [Sync-AI](https://github.com/SamY
 
 - **Desktop framework:** Tauri 2
 - **Backend:** Rust
-- **Frontend:** React + TypeScript (approved)
-- **Frontend build tool:** Vite (selected)
-- **Local inference:** llama.cpp with GGUF models
+- **Frontend:** React + TypeScript
+- **Frontend build tool:** Vite
+- **Package manager:** npm
+- **Local inference:** llama.cpp with GGUF models (not integrated yet)
 - **Persistence:** SQLite (planned; schema not yet implemented)
 - **Initial platform:** Windows x64
 - **Operating principle:** offline-first; no cloud service required for core chat or inference
 
-The frontend will recreate and adapt the Android application's visual language and workflows for desktop. It will not attempt to transplant Android Java UI code directly.
+The frontend recreates and adapts the Android application's visual language and workflows for desktop. It does not attempt to transplant Android Java UI code directly.
+
+## Current development status
+
+**Phase 1 foundation scaffold created.** The repository now contains a Tauri 2 + React + TypeScript + Vite app shell and a minimal Rust metadata command. The initial screen is deliberately a foundation/status page, not a working chat application.
+
+Not implemented yet:
+- Chat persistence or local inference
+- GGUF model import/load/unload
+- SQLite or Workspace storage
+- File Library or Tasks & Notes
+- Voice, camera or recorder features
+- Host-computer tools or approval execution
+
+## Run locally on Windows
+
+Install the Windows prerequisites first:
+- Rust stable with the MSVC toolchain
+- Microsoft C++ Build Tools with **Desktop development with C++**
+- Microsoft Edge WebView2
+- Node.js compatible with the installed Vite version, plus npm
+
+See the [official Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
+
+Then, from the repository root:
+
+~~~powershell
+npm install
+npm run tauri dev
+~~~
+
+To check the frontend production bundle:
+
+~~~powershell
+npm run build
+~~~
+
+Running only **npm run dev** opens the browser preview. The Rust bridge is available only inside the Tauri desktop host.
 
 ## Security principle
 
 Sync AI must never have unrestricted access to the host computer. Every AI-invoked tool operation, including reads, requires fresh one-time approval for its exact action and scope. Approval expires after that operation and cannot become a permanent permission. Model output is an untrusted proposal, never execution authority.
+
+The initial Tauri capability exposes only the core default capability. No shell, filesystem, process or opener plugin is installed. Packaging is currently disabled until the application icon and installer configuration are ready.
 
 ## Repository map
 
@@ -28,18 +68,12 @@ Sync AI must never have unrestricted access to the host computer. Every AI-invok
 - [Context Tracker](CONTEXT_TRACKER.md): authoritative project handoff and development state.
 - [Development Log](docs/DEVELOPMENT_LOG.md): chronological implementation record.
 
-## Development status
-
-**Source audit and specification complete.** No desktop application runtime, native inference integration or host-computer tool has been implemented yet.
-
 ## Source reference
 
 - Android reference repository: https://github.com/SamYoBoi284/Sync-AI
 - Initial desktop audit baseline: feat/resource-manager-task-manager-17-10-2026
-
-## Windows development prerequisites
-
-Before scaffolding/building, verify Rust stable MSVC, Microsoft C++ Build Tools with Desktop development with C++, Microsoft Edge WebView2, and Node.js LTS/npm. See the [official Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
+- Official Tauri project creation guide: https://v2.tauri.app/start/create-project/
+- Official Tauri Vite frontend guide: https://v2.tauri.app/start/frontend/
 
 ## License
 

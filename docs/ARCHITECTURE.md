@@ -1,22 +1,26 @@
 # Sync AI Desktop Architecture
 
-> Planning document. This describes the intended architecture and boundaries, not implemented runtime code.
+> This document describes the intended architecture and boundaries, with Phase 1 scaffold status called out separately from planned systems.
 
 ## 1. Product and technology direction
 
 - Windows x64 first.
 - Tauri 2 desktop shell.
-- React + TypeScript frontend (approved).
-- Vite build tooling (selected for the planned scaffold).
+- React + TypeScript frontend.
+- Vite build tooling.
+- npm package manager.
 - Rust backend.
 - llama.cpp for local GGUF inference.
 - SQLite as the planned persistence layer; schema/migrations remain open.
 - Offline-first core chat and inference.
 - Desktop project remains separate from the Android repository.
 
-Tauri 2 supports a JavaScript frontend framework. On Windows it uses Microsoft Edge WebView2; this is not an Electron-style bundled Chromium application. Windows development requires Rust/MSVC, Microsoft C++ Build Tools, WebView2 and Node.js for the React frontend.
+Tauri 2 supports React and other JavaScript frameworks. Tauri's maintained create-tauri-app templates include React TypeScript, and its current frontend guidance recommends Vite for SPA frameworks. On Windows Tauri uses Microsoft Edge WebView2.
 
-Official prerequisites: https://v2.tauri.app/start/prerequisites/
+Official references:
+- https://v2.tauri.app/start/create-project/
+- https://v2.tauri.app/start/frontend/
+- https://v2.tauri.app/start/prerequisites/
 
 ## 2. High-level structure
 
@@ -115,12 +119,13 @@ Non-negotiable properties:
 - Denial, cancellation, malformed requests and uncertain targets fail closed.
 - Logs omit private file contents, secrets and prompt bodies by default.
 
-Tauri capabilities are a second boundary that controls which commands are exposed to a window. They do not make unsafe Rust command implementations safe. Keep capabilities minimal; do not enable broad shell or filesystem command surfaces.
+Tauri capabilities are a second boundary that controls which plugin/core commands are exposed to a window. They do not make unsafe Rust command implementations safe. Keep capabilities minimal; do not enable broad shell or filesystem command surfaces.
 
 Official security references:
 - https://tauri.app/security/
 - https://tauri.app/security/capabilities/
 - https://tauri.app/security/permissions/
+- https://v2.tauri.app/security/csp/
 
 ## 8. Windows platform adapters
 
@@ -134,47 +139,47 @@ Android-specific features such as contacts/calls, Android intents, wake-word for
 
 Report only what the Windows APIs actually measure. Distinguish process-wide CPU and memory from host-wide metrics. Do not invent per-library or per-model memory splits. Mark estimates as estimates and make diagnostics export an explicit user action.
 
-## 10. Proposed code organization
+## 10. Current Phase 1 scaffold
+
+Created in the repository:
+- React 19 + TypeScript 6 frontend structure with Vite 8 tooling.
+- Tauri 2 Rust application entry point.
+- One read-only command, get_app_info, returning static app version, OS and architecture metadata.
+- Typed frontend bridge for that command.
+- Responsive foundation screen showing native-bridge or browser-preview state.
+- Reduced-motion CSS handling.
+- Restrictive CSP with no remote resource sources.
+- Minimal main-window capability with core:default only.
+- No shell, filesystem, process, opener or other plugin surface.
+- Tauri bundling disabled until icon assets and installer decisions are ready.
+
+The metadata command does not inspect user files or perform privileged operations. The frontend navigation labels are explicitly marked planned and are not functional routes.
+
+## 11. Current code organization
 
 ~~~text
 src/
-  app/
-  components/
-    chat/
-    core/
-    layout/
-    dialogs/
-  pages/
-  hooks/
+  App.tsx
+  main.tsx
   services/
-  state/
-  themes/
-  types/
+    nativeBridge.ts
+  styles.css
 
 src-tauri/
   capabilities/
-  migrations/
   src/
     commands/
-    inference/
-    models/
-    permissions/
-    platform/windows/
-    storage/
-    tools/
-
-native/
-  llama/
-
-tests/
-  frontend/
-  rust/
-  security/
+      app_info.rs
+    lib.rs
+    main.rs
+  Cargo.toml
+  build.rs
+  tauri.conf.json
 ~~~
 
-Create folders as implementation boundaries are needed; do not populate the repository with empty architecture theatre.
+Additional folders will be created as implementation boundaries are needed; do not populate the repository with empty placeholders.
 
-## 11. Open implementation decisions
+## 12. Open implementation decisions
 
 - SQLite schema and migration approach.
 - llama.cpp build configuration and FFI wrapper.
@@ -184,6 +189,6 @@ Create folders as implementation boundaries are needed; do not populate the repo
 - Packaging, signing and update strategy.
 - License selection and third-party notices.
 
-## 12. Status
+## 13. Validation status
 
-Architecture and source mapping are documented. No Tauri scaffold, frontend code, Rust commands, database schema, native build or host-computer tool has been implemented or tested.
+The scaffold has been committed to GitHub and the source files have been retrieved for verification. The project has not yet been built on Windows in this session. Dependency installation, npm typecheck/build, cargo check, Tauri development launch and installer packaging are therefore unverified.

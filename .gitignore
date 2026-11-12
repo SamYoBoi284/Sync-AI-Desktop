@@ -2,9 +2,11 @@
 node_modules/
 .pnpm-store/
 
-# Frontend builds
+# Frontend builds and tooling caches
 dist/
 build/
+.vite/
+coverage/
 
 # Rust / Tauri
 target/

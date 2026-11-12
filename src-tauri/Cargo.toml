@@ -1,0 +1,17 @@
+[package]
+name = "sync-ai-desktop"
+version = "0.1.0"
+description = "A Windows-first, offline-first desktop companion to Sync AI."
+authors = ["Sync AI contributors"]
+edition = "2024"
+
+[lib]
+name = "sync_ai_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+tauri = { version = "2", features = [] }

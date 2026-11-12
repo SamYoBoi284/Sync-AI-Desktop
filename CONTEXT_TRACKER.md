@@ -14,27 +14,34 @@
 
 ## 2. Current status
 
-**Phase:** 0 — Repository foundation and source-to-desktop specification  
-**Status:** Repository skeleton, architecture notes and detailed Android-to-desktop port specification are committed. No desktop app scaffold or feature runtime exists.
+**Phase:** 1 — Tauri + React + TypeScript foundation scaffold  
+**Status:** The Phase 1 source scaffold is committed. It contains a React/Vite desktop UI foundation, Tauri 2 configuration, Rust application entry point and one harmless app-metadata IPC command. No chat, inference, persistence or computer-control feature is implemented.
 
 ### Verified in this repository
 
 - Public repository exists; default branch is main.
-- Initial project structure and planning docs are present.
-- Source-to-desktop specification is in docs/ANDROID_TO_DESKTOP_SPEC.md.
+- Detailed Android-to-desktop port specification is committed at docs/ANDROID_TO_DESKTOP_SPEC.md.
+- React + TypeScript + Vite frontend files are committed.
+- Tauri 2 Rust source/configuration files are committed.
+- get_app_info is registered as the only custom Rust command.
+- The main-window capability contains core:default only.
+- No shell, filesystem, process or opener plugin is added.
+- The frontend status page distinguishes the native bridge from browser preview.
 
-### Not yet implemented
+### Not yet implemented or verified
 
-- Tauri application scaffold
-- React/TypeScript frontend
-- Rust backend commands
+- npm dependency installation and package lockfile
+- Frontend typecheck/production build
+- Tauri development launch on Windows
+- Cargo check/build on Windows
 - SQLite schema or migrations
-- llama.cpp Windows build/integration
+- Chat persistence or Android backup import/export
 - GGUF model manager
-- Chat persistence
+- llama.cpp Windows build/integration
+- Workspace, File Library, Tasks & Notes or voice
 - Permission/approval UI or enforcement
-- Windows tools or system adapters
-- Automated tests, CI, installer or packaging
+- Windows tools/system adapters
+- Automated tests, CI, installer, app icons or packaging
 
 ## 3. Product requirements
 
@@ -56,16 +63,16 @@
 | Desktop shell | Tauri 2 | Agreed |
 | Backend | Rust | Agreed |
 | Frontend | React + TypeScript | **Approved by user on 2026-11-12** |
-| Frontend build tool | Vite | Selected for planned scaffold |
-| Package manager | npm | Planned initial default |
+| Frontend build tool | Vite | Selected |
+| Package manager | npm | Selected |
 | Inference | llama.cpp + GGUF | Agreed direction |
 | Persistence | SQLite | Proposed; schema not designed yet |
 | Config | Local structured settings | Implementation choice open |
 | Platform | Windows x64 first | Agreed |
 
-React + TypeScript is compatible with Tauri 2's web frontend approach. Vite is the selected frontend build tool for the planned app scaffold. No dependencies have been installed and no scaffold has been generated yet.
+The Tauri-maintained create-tauri-app project includes a React TypeScript template. Tauri's frontend documentation recommends Vite for SPA frameworks. The starter uses React 19, TypeScript 6 and Vite 8 dependency ranges from the maintained React-TS template. Dependency installation is not yet verified.
 
-Windows dev prerequisites to check on the actual build machine: Rust stable MSVC, Microsoft C++ Build Tools (Desktop development with C++), WebView2, and Node.js LTS/npm. WebView2 is included on Windows 10 version 1803 and later in standard installations, but the local machine still needs verification.
+Windows dev prerequisites to check on the actual build machine: Rust stable MSVC, Microsoft C++ Build Tools (Desktop development with C++), WebView2, and a Node.js version compatible with the selected Vite release. WebView2 is included on many Windows 10 version 1803+ installations, but the local machine still needs verification.
 
 ## 5. Android source audit baseline
 
@@ -123,11 +130,35 @@ Key desktop decisions:
 - Build llama.cpp for Windows behind an opaque-handle C ABI or safe Rust FFI. Exact mechanism requires a proof-of-concept spike.
 - Defer Android-specific camera, calls, contacts, intents, wake-word services, SpeechRecognizer/TTS and media intents until desktop-specific designs exist.
 
-## 7. Initial architecture
+## 7. Phase 1 scaffold inventory
 
-Frontend: React + TypeScript + Vite presentation and state.  
+| Path | Purpose |
+|---|---|
+| package.json | React, TypeScript, Vite, Tauri CLI/API dependencies and scripts |
+| index.html | WebView entry point |
+| vite.config.ts | React plugin, fixed dev port 1420 and Tauri file-watch exclusion |
+| tsconfig.json / tsconfig.node.json | Strict frontend and Vite configuration TypeScript |
+| src/main.tsx | React root |
+| src/App.tsx | Foundation UI, planned navigation labels, runtime bridge status |
+| src/styles.css | Responsive baseline and reduced-motion handling |
+| src/services/nativeBridge.ts | Typed call to the Rust metadata command |
+| src-tauri/Cargo.toml | Rust/Tauri dependencies |
+| src-tauri/build.rs | Tauri build integration |
+| src-tauri/src/main.rs | Windows desktop entry point |
+| src-tauri/src/lib.rs | Tauri builder and command registration |
+| src-tauri/src/commands/app_info.rs | Harmless static app/OS/architecture information |
+| src-tauri/tauri.conf.json | Main window, Vite commands, restrictive CSP, packaging disabled |
+| src-tauri/capabilities/main.json | Minimal main-window capability (core:default only) |
+
+The status/navigation screen is a foundation placeholder, not an implemented chat UI. Navigation labels are explicitly planned and inert; the screen must not imply those features work.
+
+Tauri packaging is disabled pending an app icon and installer configuration. No external font/CDN is used; the UI stylesheet is local. No privileged plugin is installed.
+
+## 8. Architecture
+
+Frontend: React + TypeScript + Vite.  
 Desktop shell: Tauri 2.  
-Backend: Rust typed commands, app services, state, validation, storage, model lifecycle and tool broker.  
+Backend: Rust typed commands, services, validation, storage, model lifecycle and tool broker.  
 Native inference: llama.cpp built for Windows behind a narrow FFI.  
 Storage: SQLite planned for conversations, messages, preferences, model metadata and Workspace artifacts.  
 Local models: user-managed GGUF files, excluded from Git.  
@@ -135,7 +166,7 @@ Security boundary: explicit one-time approval UI plus backend validation and nar
 
 Tauri capabilities are an additional boundary, not a replacement for per-operation approval or safe Rust implementation.
 
-## 8. Security model — non-negotiable
+## 9. Security model — non-negotiable
 
 - No generic execute_shell, arbitrary command execution, terminal or script runner exposed to the model.
 - No unrestricted filesystem API or model-controlled path expansion.
@@ -150,41 +181,10 @@ Tauri capabilities are an additional boundary, not a replacement for per-operati
 - Log decisions without exposing private file contents, prompts or secrets.
 - No remember-my-choice or blanket permissions unless the owner explicitly revises the requirement.
 
-## 9. Proposed repository layout
-
-Current initialized skeleton is smaller; the following is a target layout, not an assertion that these directories/files exist yet:
-
-~~~text
-Sync-AI-Desktop/
-├── docs/
-│   ├── ANDROID_TO_DESKTOP_SPEC.md
-│   ├── ARCHITECTURE.md
-│   └── DEVELOPMENT_LOG.md
-├── src/
-│   ├── app/
-│   ├── components/
-│   ├── pages/
-│   ├── hooks/
-│   ├── services/
-│   ├── state/
-│   ├── themes/
-│   └── types/
-├── src-tauri/
-│   ├── capabilities/
-│   ├── migrations/
-│   └── src/
-├── native/
-│   └── llama/
-└── tests/
-    ├── frontend/
-    ├── rust/
-    └── security/
-~~~
-
 ## 10. Development sequence
 
-1. Phase 0 — Repository foundation and source-to-desktop spec. Planning documents committed; no runtime code.
-2. Phase 1 — Tauri 2 + React + TypeScript + Vite scaffold; minimal Rust command boundary; Windows dev/build verification.
+1. Phase 0 — Repository foundation and source-to-desktop spec. Complete.
+2. Phase 1 — Tauri 2 + React + TypeScript + Vite scaffold and minimal metadata IPC command. Source committed; builds not yet verified.
 3. Phase 2 — Desktop shell, sidebar, chat UI, Sync Core, themes and settings.
 4. Phase 3 — SQLite schema/migrations, chat CRUD, Android backup import/export.
 5. Phase 4 — GGUF manager and minimal Windows llama.cpp FFI proof of concept.
@@ -200,7 +200,7 @@ Do not implement computer-control tools before the approval model and its tests 
 - Prefer small, reviewable changes.
 - Do not overwrite user work or unrelated files.
 - Keep Android and desktop repositories isolated.
-- Update CONTEXT_TRACKER.md in the same commit as every meaningful code/architecture change.
+- Update CONTEXT_TRACKER.md in the same commit as every meaningful implementation/architecture change.
 - Record files changed, behavior added, tests actually run, results, limitations and the next exact step.
 - Distinguish planned, implemented, tested and verified.
 - Never invent test results, commit hashes, file contents or repository state.
@@ -217,10 +217,17 @@ Do not implement computer-control tools before the approval model and its tests 
 - Inspected core Android chat, navigation, themes, preferences, chat store, model manager, inference boundary/native implementation, tool engine, resource manager and Workspace store.
 - Created docs/ANDROID_TO_DESKTOP_SPEC.md with verified behavior, component plan, Windows-specific mapping, compatibility requirements, security design and implementation phases.
 - Updated architecture notes for the approved frontend and one-time approval broker.
-- User explicitly approved React + TypeScript; Vite selected for the planned scaffold.
-- Updated README to reflect the approved direction.
-- Tests/builds: not run; desktop application code still does not exist.
+- User explicitly approved React + TypeScript; Vite selected.
+- Tests/builds: not run.
+
+### 2026-11-12 — Phase 1 application scaffold
+- Added the Tauri 2 + React + TypeScript + Vite project structure.
+- Added a minimal Rust get_app_info command and typed frontend bridge.
+- Added a static foundation UI; planned navigation remains nonfunctional and labelled planned.
+- Added a restrictive CSP and a main-window capability with core:default only. No shell/filesystem/process/opener plugin.
+- Disabled packaging until application icon and installer configuration are ready.
+- Source files and GitHub branch state verified. Dependency installation, frontend build, cargo check and Windows Tauri launch were not run in this session.
 
 ## 13. Exact next step
 
-Phase 1: verify the Windows development environment and create the Tauri 2 + React + TypeScript + Vite scaffold. Start with minimal capabilities and a placeholder typed Rust command boundary. Do not add shell or broad filesystem plugins. Then run both the frontend production build and Tauri development launch, recording the actual results.
+Install dependencies on the Windows development machine, generate/commit package-lock.json, run npm run build, then run npm run tauri dev and verify the get_app_info handshake. Resolve actual build errors before beginning the interactive chat UI. Do not add filesystem or shell access as a shortcut.
