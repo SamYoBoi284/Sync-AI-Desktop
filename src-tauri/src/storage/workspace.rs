@@ -9,7 +9,7 @@ use super::{db_error, now, Database};
 
 const MAX_ARTIFACT_BYTES: usize = 2 * 1024 * 1024;
 const MAX_NOTE_BYTES: usize = 2 * 1024 * 1024;
-const MAX_TASK_DETAILS_BYTES: usize = 128 * 1024;
+const MAX_TASK_DETAILS_BYTES: usize = 32 * 1024;
 const MAX_CONTEXT_BYTES: usize = 48 * 1024;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -237,7 +237,7 @@ impl Database {
              WHERE (?1 = '' OR title LIKE ?2 OR details LIKE ?2)
              ORDER BY CASE status WHEN 'done' THEN 2 WHEN 'in-progress' THEN 1 ELSE 0 END,
                       CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC, updated_at DESC
-             LIMIT 500"
+             LIMIT 200"
         ).map_err(db_error)?;
         let rows = statement.query_map(params![needle, pattern], task_from_row).map_err(db_error)?;
         rows.collect::<Result<Vec<_>, _>>().map_err(db_error)
@@ -506,7 +506,7 @@ fn validate_artifact(input: &NewWorkspaceArtifact) -> Result<(), String> {
 
 fn validate_task(input: &TaskInput) -> Result<(), String> {
     validate_title(&input.title, "Task title")?;
-    if input.details.len() > MAX_TASK_DETAILS_BYTES { return Err("Task details exceed the 128 KiB limit.".into()); }
+    if input.details.len() > MAX_TASK_DETAILS_BYTES { return Err("Task details exceed the 32 KiB limit.".into()); }
     if !matches!(input.status.as_str(), "todo" | "in-progress" | "done") { return Err("Invalid task status.".into()); }
     if !matches!(input.priority.as_str(), "low" | "normal" | "high") { return Err("Invalid task priority.".into()); }
     if let Some(date) = &input.due_date {
