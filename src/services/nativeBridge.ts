@@ -104,13 +104,17 @@ export interface WorkspaceArtifact {
   sourceChatId: string | null; sourceMessageId: string | null;
   includeInContext: boolean; createdAt: string; updatedAt: string;
 }
+export interface WorkspaceArtifactSummary {
+  id: string; title: string; kind: ArtifactKind;
+  includeInContext: boolean; createdAt: string; updatedAt: string;
+}
 export interface WorkspaceArtifactInput {
   title: string; kind: ArtifactKind; content: string; includeInContext: boolean;
   sourceChatId?: string | null; sourceMessageId?: string | null;
 }
 export interface WorkspaceContextEntry { kind: string; title: string; content: string; }
-export function listWorkspaceArtifacts(query = ""): Promise<WorkspaceArtifact[]> {
-  return invoke<WorkspaceArtifact[]>("list_workspace_artifacts", { query: query || null });
+export function listWorkspaceArtifacts(query = ""): Promise<WorkspaceArtifactSummary[]> {
+  return invoke<WorkspaceArtifactSummary[]>("list_workspace_artifacts", { query: query || null });
 }
 export function getWorkspaceArtifact(artifactId: string): Promise<WorkspaceArtifact> {
   return invoke<WorkspaceArtifact>("get_workspace_artifact", { artifactId });
@@ -154,9 +158,16 @@ export interface NoteRecord {
   id: string; title: string; content: string; pinned: boolean; includeInContext: boolean;
   createdAt: string; updatedAt: string;
 }
+export interface NoteSummary {
+  id: string; title: string; pinned: boolean; includeInContext: boolean;
+  createdAt: string; updatedAt: string;
+}
 export interface NoteInput { title: string; content: string; pinned: boolean; includeInContext: boolean; }
-export function listNotes(query = ""): Promise<NoteRecord[]> {
-  return invoke<NoteRecord[]>("list_notes", { query: query || null });
+export function listNotes(query = ""): Promise<NoteSummary[]> {
+  return invoke<NoteSummary[]>("list_notes", { query: query || null });
+}
+export function getNote(noteId: string): Promise<NoteRecord> {
+  return invoke<NoteRecord>("get_note", { noteId });
 }
 export function createNote(note: NoteInput): Promise<NoteRecord> {
   return invoke<NoteRecord>("create_note", { note });
